@@ -1,6 +1,10 @@
 # Configuración Completa de Router Mikrotik
 # Incluye IPv4, IPv6, VLANs, Firewall, NAT y más
-
+"""
+Este es un comentario
+que puede ocupar
+múltiples líneas
+"""
 device:
     vendor = "mikrotik"
     model = "CCR2004-1G-12S+2XS"

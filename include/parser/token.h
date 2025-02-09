@@ -17,6 +17,7 @@ typedef enum {
     TOKEN_DOT,
     TOKEN_MINUS,
     TOKEN_SLASH,          // Para CIDR notation (/)
+    TOKEN_MULTILINE_COMMENT, // Para comentarios multilínea """..."""
 
     // Keywords
     TOKEN_DEVICE,
@@ -83,6 +84,7 @@ inline const char* to_str(token_t token) {
         case TOKEN_DOT: return "DOT";
         case TOKEN_MINUS: return "MINUS";
         case TOKEN_SLASH: return "SLASH";
+        case TOKEN_MULTILINE_COMMENT: return "MULTILINE_COMMENT";
         case TOKEN_DEVICE: return "DEVICE";
         case TOKEN_VENDOR: return "VENDOR";
         case TOKEN_INTERFACES: return "INTERFACES";

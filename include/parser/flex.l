@@ -10,17 +10,20 @@
 /* Options */
 %option noyywrap
 %option yylineno
+%option nounput
+%option noinput
 
 /* Regular definitions */
 WHITESPACE      [ \t\r]+
 NEWLINE         \n
 DIGIT           [0-9]
 LETTER          [a-zA-Z]
+BOOL            true|false
 IDENTIFIER      {LETTER}[a-zA-Z0-9_]*
 NUMBER          {DIGIT}+
 STRING          \"[^\"]*\"
-BOOL            true|false
 COMMENT         #[^\n]*
+MULTILINE       \"\"\"([^"]|\n|\"[^"]|\"\"[^"])*\"\"\"
 
 /* IPv4 definitions */
 OCTET           ([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])
@@ -31,9 +34,9 @@ IP_RANGE        {IP_ADDRESS}\-{IP_ADDRESS}
 /* IPv6 definitions */
 HEX             [0-9A-Fa-f]
 HEX_QUAD        {HEX}{1,4}
-IPV6_PART       {HEX_QUAD}:
-IPV6_FULL       {IPV6_PART}{6}{HEX_QUAD}|{IPV6_PART}{7}{HEX_QUAD}
-IPV6_COMPRESSED (::|({IPV6_PART}{0,6}:)|{IPV6_PART}{0,5}::|{IPV6_PART}{0,4}::|{IPV6_PART}{0,3}::|{IPV6_PART}{0,2}::|{IPV6_PART}::)
+IPV6_SEG        {HEX_QUAD}
+IPV6_FULL       {IPV6_SEG}:{IPV6_SEG}:{IPV6_SEG}:{IPV6_SEG}:{IPV6_SEG}:{IPV6_SEG}:{IPV6_SEG}:{IPV6_SEG}
+IPV6_COMPRESSED (({IPV6_SEG}:){6}{IPV6_SEG}|::({IPV6_SEG}:){5}{IPV6_SEG}|({IPV6_SEG})?::({IPV6_SEG}:){4}{IPV6_SEG}|(({IPV6_SEG}:){0,1}{IPV6_SEG})?::({IPV6_SEG}:){3}{IPV6_SEG}|(({IPV6_SEG}:){0,2}{IPV6_SEG})?::({IPV6_SEG}:){2}{IPV6_SEG}|(({IPV6_SEG}:){0,3}{IPV6_SEG})?::{IPV6_SEG}:{IPV6_SEG}|(({IPV6_SEG}:){0,4}{IPV6_SEG})?::{IPV6_SEG}|(({IPV6_SEG}:){0,5}{IPV6_SEG})?::{IPV6_SEG}|(({IPV6_SEG}:){0,6}{IPV6_SEG})?::)
 IPV6_ADDRESS    {IPV6_FULL}|{IPV6_COMPRESSED}
 IPV6_CIDR       {IPV6_ADDRESS}\/(12[0-8]|1[0-1][0-9]|[1-9][0-9]|[0-9])
 IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
@@ -42,7 +45,16 @@ IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
 
 {WHITESPACE}    { /* Ignore whitespace */ }
 {NEWLINE}       { line_number++; }
-{COMMENT}       { /* Ignore comments */ }
+{COMMENT}       { /* Ignore single line comments */ }
+{MULTILINE}     { 
+                    /* Count newlines in multiline comment */
+                    char *p = yytext;
+                    while (*p) {
+                        if (*p == '\n') line_number++;
+                        p++;
+                    }
+                    /* Ignore multiline comment */
+                }
 
 ":"             { return TOKEN_COLON; }
 "="             { return TOKEN_EQUALS; }
@@ -98,10 +110,10 @@ IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
 {IP_CIDR}       { return TOKEN_IP_CIDR; }
 {IP_RANGE}      { return TOKEN_IP_RANGE; }
 {IP_ADDRESS}    { return TOKEN_IP_ADDRESS; }
+{BOOL}          { return TOKEN_BOOL; }
 {IDENTIFIER}    { return TOKEN_IDENTIFIER; }
 {NUMBER}        { return TOKEN_NUMBER; }
 {STRING}        { return TOKEN_STRING; }
-{BOOL}          { return TOKEN_BOOL; }
 
 .               { printf("Error: unexpected character %s at line %d\n", yytext, line_number); }
 
