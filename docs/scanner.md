@@ -1,18 +1,20 @@
-# Tokenización del Lenguaje DSL para Configuración de Red
+# Tokenization of the DSL Language for Mikrotik Network Configuration
 
-## Introducción a la Tokenización
+## Introduction to Tokenization
 
-La **tokenización**, también conocida como análisis léxico, es la primera fase del proceso de compilación. El **scanner** (o tokenizer) toma el código fuente de nuestro DSL como entrada y lo divide en una secuencia de unidades léxicas significativas llamadas **tokens**. Cada token representa un elemento básico del lenguaje, como palabras clave, identificadores, operadores, literales y símbolos de puntuación.
+**Tokenization**, also known as lexical analysis, is the first phase of the compilation process. The **scanner** (or tokenizer) takes the source code of our DSL as input and breaks it down into a sequence of meaningful lexical units called **tokens**. Each token represents a basic element of the language, such as keywords, identifiers, operators, literals, and punctuation symbols.
 
-El objetivo del tokenizer es simplificar la entrada para la siguiente fase, el **parser** (análisis sintáctico).  En lugar de trabajar directamente con el flujo de caracteres del código fuente, el parser trabaja con la secuencia de tokens, lo que facilita la identificación de la estructura gramatical del programa DSL.
+The goal of the tokenizer is to simplify the input for the next phase, the **parser** (syntactic analysis). Instead of working directly with the character stream of the source code, the parser works with the token sequence, which makes it easier to identify the grammatical structure of the DSL program.
 
-## Tipos de Tokens en Nuestro DSL
+For this project, we are specifically focusing on creating a DSL to configure **Mikrotik** devices. Therefore, while the tokenization process is general, the examples and context will be tailored to Mikrotik configuration.
 
-Nuestro DSL se compone de los siguientes tipos de tokens:
+## Token Types in Our Mikrotik DSL
 
-### 1. Palabras Clave (Keywords)
+Our DSL for Mikrotik configuration is composed of the following token types:
 
-Las **palabras clave** son identificadores reservados que tienen un significado especial en el lenguaje DSL.  No pueden ser utilizados como identificadores definidos por el usuario. En nuestro DSL, las palabras clave son:
+### 1. Keywords
+
+**Keywords** are reserved identifiers that have a special meaning in the DSL language. They cannot be used as user-defined identifiers. In our DSL, the keywords related to Mikrotik configuration are:
 
 *   `device`
 *   `vendor`
@@ -20,10 +22,6 @@ Las **palabras clave** son identificadores reservados que tienen un significado 
 *   `ip`
 *   `routing`
 *   `firewall`
-*   `olt`
-*   `switch`
-*   `fortinet_firewall`
-*   `vpn`
 *   `system`
 *   `type`
 *   `admin_state`
@@ -36,44 +34,26 @@ Las **palabras clave** son identificadores reservados que tienen un significado 
 *   `interface`
 *   `address`
 *   `dhcp`
+*   `dhcp_client`
+*   `dhcp_server`
 *   `static_route_default_gw`
 *   `destination`
 *   `gateway`
 *   `chain`
 *   `connection_state`
 *   `action`
-*   `pon_ports`
-*   `pon1`
-*   `profile`
-*   `onu_management`
-*   `auto_onu_provisioning`
-*   `vlans`
-*   `interface_configuration`
-*   `port_mode`
-*   `access_vlan`
-*   `policies`
-*   `policy_allow_web`
-*   `source_interface`
-*   `destination_interface`
-*   `source_address`
-*   `destination_address`
-*   `service`
-*   `ipsec_tunnel_site1`
-*   `local_address`
-*   `remote_address`
-*   `authentication_method`
-*   `preshared_key`
-*   `hostname`
-*   `timezone`
-*   `ntp_server`
+*   `input`
+*   `output`
+*   `forward`
+*   `srcnat`
+*   `masquerade`
 *   `enabled`
 *   `disabled`
 *   `accept`
 *   `drop`
 *   `reject`
-*   `masquerade`
 
-**Ejemplo de Palabras Clave en el DSL:**
+**Example of Keywords in the Mikrotik DSL:**
 
 ```dsl
 device:
