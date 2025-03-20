@@ -8,7 +8,50 @@ extern char* yytext;
 extern int line_number;
 extern FILE* yyin;
 int yyerror(const char* s);
+
+/* For section tracking */
+typedef enum {
+    SECTION_NONE,
+    SECTION_DEVICE,
+    SECTION_INTERFACES,
+    SECTION_IP,
+    SECTION_ROUTING,
+    SECTION_FIREWALL,
+    SECTION_SYSTEM
+} SectionType;
+
+SectionType current_section = SECTION_NONE;
+int nesting_level = 0;
+
+void enter_section(SectionType section, const char* name) {
+    current_section = section;
+    nesting_level = 1;
+    printf("Debug: Entering section %d (%s)\n", section, name);
+}
+
+void enter_block(const char* name) {
+    nesting_level++;
+    printf("Debug: Increasing nesting to %d, entering block %s\n", nesting_level, name);
+}
+
+void exit_block() {
+    nesting_level--;
+    printf("Debug: Decreasing nesting to %d\n", nesting_level);
+    
+    if (nesting_level == 0) {
+        current_section = SECTION_NONE;
+        printf("Debug: Leaving section\n");
+    }
+}
 %}
+
+%define parse.error verbose
+
+/* Enable location tracking for better error messages */
+%locations
+
+/* Enable debugging features */
+%define parse.trace
 
 /* Define value types for tokens */
 %union {
@@ -40,8 +83,11 @@ int yyerror(const char* s);
 %token <str_val> TOKEN_IPV6_ADDRESS TOKEN_IPV6_CIDR TOKEN_IPV6_RANGE
 
 /* Non-terminals */
-%type <str_val> string_value identifier ip_address
-%type <int_val> number
+%type <str_val> any_identifier property_name section_name
+
+/* Define precedence to help resolve shift/reduce conflicts */
+%left TOKEN_COLON
+%left TOKEN_EQUALS
 
 /* Start symbol */
 %start config
@@ -58,243 +104,109 @@ section_list
     ;
 
 section
-    : device_section
-    | interfaces_section
-    | ip_section
-    | routing_section
-    | firewall_section
-    | system_section
+    : section_header block {
+        exit_block();  /* When a section is complete, reset section context */
+    }
     ;
 
-device_section
-    : TOKEN_DEVICE TOKEN_COLON device_properties
+section_header
+    : section_name TOKEN_COLON {
+        if (strcmp($1, "device") == 0) enter_section(SECTION_DEVICE, "device");
+        else if (strcmp($1, "interfaces") == 0) enter_section(SECTION_INTERFACES, "interfaces");
+        else if (strcmp($1, "ip") == 0) enter_section(SECTION_IP, "ip");
+        else if (strcmp($1, "routing") == 0) enter_section(SECTION_ROUTING, "routing");
+        else if (strcmp($1, "firewall") == 0) enter_section(SECTION_FIREWALL, "firewall");
+        else if (strcmp($1, "system") == 0) enter_section(SECTION_SYSTEM, "system");
+    }
     ;
 
-device_properties
-    : device_property
-    | device_properties device_property
+section_name
+    : TOKEN_DEVICE { $$ = "device"; }
+    | TOKEN_INTERFACES { $$ = "interfaces"; }
+    | TOKEN_IP { $$ = "ip"; }
+    | TOKEN_ROUTING { $$ = "routing"; }
+    | TOKEN_FIREWALL { $$ = "firewall"; }
+    | TOKEN_SYSTEM { $$ = "system"; }
     ;
 
-device_property
-    : TOKEN_VENDOR TOKEN_EQUALS string_value
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
+block
+    : /* empty */
+    | statement_list
     ;
 
-interfaces_section
-    : TOKEN_INTERFACES TOKEN_COLON interface_list
+statement_list
+    : statement
+    | statement_list statement
     ;
 
-interface_list
-    : interface_def
-    | interface_list interface_def
+statement
+    : property_statement
+    | block_statement
     ;
 
-interface_def
-    : identifier TOKEN_COLON interface_properties
+property_statement
+    : property_name TOKEN_EQUALS value
     ;
 
-interface_properties
-    : interface_property
-    | interface_properties interface_property
+block_statement
+    : any_identifier TOKEN_COLON {
+        enter_block($1);  /* Entering a nested block */
+    } block {
+        exit_block();   /* Exiting a nested block */
+    }
     ;
 
-interface_property
-    : TOKEN_TYPE TOKEN_EQUALS string_value
-    | TOKEN_ADMIN_STATE TOKEN_EQUALS string_value
-    | TOKEN_DESCRIPTION TOKEN_EQUALS string_value
-    | TOKEN_ETHERNET TOKEN_COLON ethernet_properties
-    | TOKEN_VLAN TOKEN_COLON vlan_properties
-    | TOKEN_IP TOKEN_COLON ip_interface_properties
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
+/* Generic property name to cover all token types that can appear before equals */
+property_name
+    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
+    | TOKEN_VENDOR { $$ = "vendor"; }
+    | TOKEN_TYPE { $$ = "type"; }
+    | TOKEN_ADMIN_STATE { $$ = "admin_state"; }
+    | TOKEN_DESCRIPTION { $$ = "description"; }
+    | TOKEN_ADDRESS { $$ = "address"; }
+    | TOKEN_STATIC_ROUTE_DEFAULT_GW { $$ = "static_route_default_gw"; }
+    | TOKEN_CHAIN { $$ = "chain"; }
+    | TOKEN_CONNECTION_STATE { $$ = "connection_state"; }
+    | TOKEN_ACTION { $$ = "action"; }
+    | TOKEN_SPEED { $$ = "speed"; }
+    | TOKEN_DUPLEX { $$ = "duplex"; }
+    | TOKEN_VLAN_ID { $$ = "vlan_id"; }
+    | TOKEN_INTERFACE { $$ = "interface"; }
+    | TOKEN_DESTINATION { $$ = "destination"; }
+    | TOKEN_GATEWAY { $$ = "gateway"; }
     ;
 
-ethernet_properties
-    : ethernet_property
-    | ethernet_properties ethernet_property
-    ;
-
-ethernet_property
-    : TOKEN_SPEED TOKEN_EQUALS string_value
-    | TOKEN_DUPLEX TOKEN_EQUALS string_value
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-vlan_properties
-    : vlan_property
-    | vlan_properties vlan_property
-    ;
-
-vlan_property
-    : TOKEN_VLAN_ID TOKEN_EQUALS value
-    | TOKEN_INTERFACE TOKEN_EQUALS string_value
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-ip_section
-    : TOKEN_IP TOKEN_COLON ip_properties
-    ;
-
-ip_properties
-    : ip_property
-    | ip_properties ip_property
-    ;
-
-ip_property
-    : TOKEN_DHCP TOKEN_COLON dhcp_properties
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    | identifier TOKEN_COLON ip_subproperties
-    ;
-
-dhcp_properties
-    : dhcp_property
-    | dhcp_properties dhcp_property
-    ;
-
-dhcp_property
-    : TOKEN_DHCP_SERVER TOKEN_COLON dhcp_server_list
-    | TOKEN_DHCP_CLIENT TOKEN_COLON dhcp_client_properties
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-dhcp_server_list
-    : dhcp_server_def
-    | dhcp_server_list dhcp_server_def
-    ;
-
-dhcp_server_def
-    : identifier TOKEN_COLON dhcp_server_properties
-    ;
-
-dhcp_server_properties
-    : dhcp_server_property
-    | dhcp_server_properties dhcp_server_property
-    ;
-
-dhcp_server_property
-    : TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-dhcp_client_properties
-    : dhcp_client_property
-    | dhcp_client_properties dhcp_client_property
-    ;
-
-dhcp_client_property
-    : TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-ip_interface_properties
-    : ip_interface_property
-    | ip_interface_properties ip_interface_property
-    ;
-
-ip_interface_property
-    : TOKEN_ADDRESS TOKEN_EQUALS value
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-ip_subproperties
-    : ip_subproperty
-    | ip_subproperties ip_subproperty
-    ;
-
-ip_subproperty
-    : TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-routing_section
-    : TOKEN_ROUTING TOKEN_COLON routing_properties
-    ;
-
-routing_properties
-    : routing_property
-    | routing_properties routing_property
-    ;
-
-routing_property
-    : TOKEN_STATIC_ROUTE_DEFAULT_GW TOKEN_EQUALS value
-    | identifier TOKEN_COLON route_properties
-    ;
-
-route_properties
-    : route_property
-    | route_properties route_property
-    ;
-
-route_property
-    : TOKEN_DESTINATION TOKEN_EQUALS value
-    | TOKEN_GATEWAY TOKEN_EQUALS value
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-firewall_section
-    : TOKEN_FIREWALL TOKEN_COLON firewall_properties
-    ;
-
-firewall_properties
-    : firewall_property
-    | firewall_properties firewall_property
-    ;
-
-firewall_property
-    : identifier TOKEN_COLON firewall_chain_properties
-    ;
-
-firewall_chain_properties
-    : firewall_rule_def
-    | firewall_chain_properties firewall_rule_def
-    ;
-
-firewall_rule_def
-    : identifier TOKEN_COLON firewall_rule_properties
-    ;
-
-firewall_rule_properties
-    : firewall_rule_property
-    | firewall_rule_properties firewall_rule_property
-    ;
-
-firewall_rule_property
-    : TOKEN_CHAIN TOKEN_EQUALS chain_value
-    | TOKEN_CONNECTION_STATE TOKEN_EQUALS list_value
-    | TOKEN_ACTION TOKEN_EQUALS action_value
-    | TOKEN_IDENTIFIER TOKEN_EQUALS value
-    ;
-
-chain_value
-    : TOKEN_INPUT
-    | TOKEN_OUTPUT
-    | TOKEN_FORWARD
-    | TOKEN_SRCNAT
-    | TOKEN_IDENTIFIER
-    ;
-
-action_value
-    : TOKEN_ACCEPT
-    | TOKEN_DROP
-    | TOKEN_REJECT
-    | TOKEN_MASQUERADE
-    | TOKEN_IDENTIFIER
-    ;
-
-system_section
-    : TOKEN_SYSTEM TOKEN_COLON system_properties
-    ;
-
-system_properties
-    : system_property
-    | system_properties system_property
-    ;
-
-system_property
-    : TOKEN_IDENTIFIER TOKEN_EQUALS value
+/* Generic identifier to cover all token types that can appear before colon */
+any_identifier
+    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
+    | TOKEN_ETHERNET { $$ = "ethernet"; }
+    | TOKEN_VLAN { $$ = "vlan"; }
+    | TOKEN_IP { $$ = "ip"; }
+    | TOKEN_DHCP { $$ = "dhcp"; }
+    | TOKEN_DHCP_SERVER { $$ = "dhcp_server"; }
+    | TOKEN_DHCP_CLIENT { $$ = "dhcp_client"; }
     ;
 
 value
-    : string_value
-    | number
+    : TOKEN_STRING
+    | TOKEN_NUMBER
     | TOKEN_BOOL
-    | ip_address
+    | TOKEN_IP_ADDRESS
+    | TOKEN_IP_CIDR
+    | TOKEN_IP_RANGE
+    | TOKEN_IPV6_ADDRESS
+    | TOKEN_IPV6_CIDR
+    | TOKEN_IPV6_RANGE
+    | TOKEN_ENABLED
+    | TOKEN_DISABLED
+    | TOKEN_INPUT
+    | TOKEN_OUTPUT
+    | TOKEN_FORWARD
+    | TOKEN_SRCNAT
+    | TOKEN_ACCEPT
+    | TOKEN_DROP
+    | TOKEN_REJECT
+    | TOKEN_MASQUERADE
     | list_value
     ;
 
@@ -305,27 +217,6 @@ list_value
 value_list
     : value
     | value_list TOKEN_COMMA value
-    ;
-
-string_value
-    : TOKEN_STRING
-    ;
-
-number
-    : TOKEN_NUMBER
-    ;
-
-identifier
-    : TOKEN_IDENTIFIER
-    ;
-
-ip_address
-    : TOKEN_IP_ADDRESS
-    | TOKEN_IP_CIDR
-    | TOKEN_IP_RANGE
-    | TOKEN_IPV6_ADDRESS
-    | TOKEN_IPV6_CIDR
-    | TOKEN_IPV6_RANGE
     ;
 
 %%
