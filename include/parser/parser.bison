@@ -51,11 +51,11 @@ void exit_block() {
 %locations
 
 /* Enable debugging features */
-%define parse.trace
+/* %define parse.trace */ /* Commented out to avoid redefinition warning */
 
 /* Define value types for tokens */
 %union {
-    char* str_val;
+    const char* str_val;
     int int_val;
 }
 
@@ -88,6 +88,8 @@ void exit_block() {
 /* Define precedence to help resolve shift/reduce conflicts */
 %left TOKEN_COLON
 %left TOKEN_EQUALS
+%left TOKEN_COMMA
+%left TOKEN_LEFT_BRACKET TOKEN_RIGHT_BRACKET
 
 /* Start symbol */
 %start config
@@ -131,6 +133,7 @@ section_name
 
 block
     : /* empty */
+    | TOKEN_LEFT_BRACE statement_list TOKEN_RIGHT_BRACE
     | statement_list
     ;
 
@@ -141,14 +144,14 @@ statement_list
 
 statement
     : property_statement
-    | block_statement
+    | subsection_statement
     ;
 
 property_statement
     : property_name TOKEN_EQUALS value
     ;
 
-block_statement
+subsection_statement
     : any_identifier TOKEN_COLON {
         enter_block($1);  /* Entering a nested block */
     } block {
@@ -158,7 +161,7 @@ block_statement
 
 /* Generic property name to cover all token types that can appear before equals */
 property_name
-    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
+    : TOKEN_IDENTIFIER { $$ = (const char*)strdup(yytext); }
     | TOKEN_VENDOR { $$ = "vendor"; }
     | TOKEN_TYPE { $$ = "type"; }
     | TOKEN_ADMIN_STATE { $$ = "admin_state"; }
@@ -178,7 +181,7 @@ property_name
 
 /* Generic identifier to cover all token types that can appear before colon */
 any_identifier
-    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
+    : TOKEN_IDENTIFIER { $$ = (const char*)strdup(yytext); }
     | TOKEN_ETHERNET { $$ = "ethernet"; }
     | TOKEN_VLAN { $$ = "vlan"; }
     | TOKEN_IP { $$ = "ip"; }
@@ -188,6 +191,11 @@ any_identifier
     ;
 
 value
+    : simple_value
+    | list_value
+    ;
+
+simple_value
     : TOKEN_STRING
     | TOKEN_NUMBER
     | TOKEN_BOOL
@@ -207,7 +215,6 @@ value
     | TOKEN_DROP
     | TOKEN_REJECT
     | TOKEN_MASQUERADE
-    | list_value
     ;
 
 list_value
@@ -215,8 +222,8 @@ list_value
     ;
 
 value_list
-    : value
-    | value_list TOKEN_COMMA value
+    : simple_value
+    | value_list TOKEN_COMMA simple_value
     ;
 
 %%
