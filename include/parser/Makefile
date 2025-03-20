@@ -1,36 +1,37 @@
 CXX = g++
 FLEX = flex
-BISON = bison --defines=token.h
+BISON = bison --defines=$(BIN_DIR)/token.h
+BIN_DIR = ../../bin/parser
 
-all: dsl_parser
+all: $(BIN_DIR)/dsl_parser
 
-dsl_parser: parser.o scanner.o main.o
-	$(CXX) scanner.o parser.o main.o -o dsl_parser
+$(BIN_DIR)/dsl_parser: $(BIN_DIR)/parser.o $(BIN_DIR)/scanner.o $(BIN_DIR)/main.o
+	$(CXX) $(BIN_DIR)/scanner.o $(BIN_DIR)/parser.o $(BIN_DIR)/main.o -o $(BIN_DIR)/dsl_parser
 
-parser.o: parser.c
-	$(CXX) -c parser.c -DYYDEBUG=1
+$(BIN_DIR)/parser.o: $(BIN_DIR)/parser.c
+	$(CXX) -c $(BIN_DIR)/parser.c -DYYDEBUG=1 -o $(BIN_DIR)/parser.o
 
-parser.c: enhanced_parser.bison
-	$(BISON) -v -t --output parser.c enhanced_parser.bison
+$(BIN_DIR)/parser.c: parser.bison
+	$(BISON) -v -t --output $(BIN_DIR)/parser.c parser.bison
 
-scanner.o: token.h scanner.c
-	$(CXX) -c scanner.c
+$(BIN_DIR)/scanner.o: $(BIN_DIR)/token.h $(BIN_DIR)/scanner.c
+	$(CXX) -c $(BIN_DIR)/scanner.c -o $(BIN_DIR)/scanner.o
 
-scanner.c: scanner.flex
-	$(FLEX) -d -o scanner.c scanner.flex
+$(BIN_DIR)/scanner.c: scanner.flex
+	$(FLEX) -d -o $(BIN_DIR)/scanner.c scanner.flex
 
-main.o: token.h main.c
-	$(CXX) -c main.c
+$(BIN_DIR)/main.o: $(BIN_DIR)/token.h main.c
+	$(CXX) -c main.c -o $(BIN_DIR)/main.o
 
-test: dsl_parser
-	./dsl_parser code.dsl
+test: $(BIN_DIR)/dsl_parser
+	$(BIN_DIR)/dsl_parser ../../test/parser/code.dsl
 
-test_simple: dsl_parser
-	./dsl_parser simpler.dsl
+test_simple: $(BIN_DIR)/dsl_parser
+	$(BIN_DIR)/dsl_parser ../../test/parser/simpler.dsl
 
-test_multi: dsl_parser
-	./dsl_parser test_multi.dsl
+test_multi: $(BIN_DIR)/dsl_parser
+	$(BIN_DIR)/dsl_parser ../../test/parser/test_multi.dsl
 
 .PHONY: clean
 clean:
-	$(RM) *.o parser.c parser.output token.h scanner.c dsl_parser 
+	$(RM) $(BIN_DIR)/*.o $(BIN_DIR)/parser.c $(BIN_DIR)/parser.output $(BIN_DIR)/token.h $(BIN_DIR)/scanner.c $(BIN_DIR)/dsl_parser 
