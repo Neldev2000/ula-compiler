@@ -2,7 +2,7 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
-    #include "token.h"
+    #include "parser.tab.h"
 
     int line_number = 1;
 %}

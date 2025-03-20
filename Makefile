@@ -1,38 +1,48 @@
 CC = gcc
-CFLAGS = -Wall -I include/parser
+CFLAGS = -Wall -Wextra
+FLEX = flex
+BISON = bison
+
+# Files and directories
 BUILD_DIR = build
 PARSER_DIR = include/parser
+SCANNER_DIR = include/scanner
+TEST_DIR = test
 
-# Scanner files
-SCANNER_SRC = $(PARSER_DIR)/scanner.c
-SCANNER_LEX = $(PARSER_DIR)/flex.l
-SCANNER_GEN = $(PARSER_DIR)/lex.yy.c
-SCANNER_BIN = $(BUILD_DIR)/scanner
+all: $(BUILD_DIR)/parser_test
 
-# Test files
-TEST_FILE = $(PARSER_DIR)/test.dsl
-
-# Targets
-.PHONY: all clean test dirs
-
-all: $(SCANNER_BIN)
-
-dirs:
+$(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-# Generate scanner C code from flex
-$(SCANNER_GEN): $(SCANNER_LEX)
-	flex -o $@ $<
+# Generate parser files (parser.tab.c and parser.tab.h)
+$(BUILD_DIR)/parser.tab.c $(BUILD_DIR)/parser.tab.h: $(PARSER_DIR)/parser.bison | $(BUILD_DIR)
+	$(BISON) -d -o $(BUILD_DIR)/parser.tab.c $<
 
-# Build scanner binary
-$(SCANNER_BIN): dirs $(SCANNER_GEN) $(SCANNER_SRC)
-	$(CC) $(CFLAGS) -o $@ $(SCANNER_GEN) $(SCANNER_SRC)
+# Generate scanner
+$(BUILD_DIR)/lex.yy.c: $(SCANNER_DIR)/flex.l $(BUILD_DIR)/parser.tab.h | $(BUILD_DIR)
+	$(FLEX) -o $@ $<
 
-# Run test
-test: $(SCANNER_BIN)
-	./$(SCANNER_BIN) $(TEST_FILE)
+# Compile scanner
+$(BUILD_DIR)/lex.yy.o: $(BUILD_DIR)/lex.yy.c
+	$(CC) $(CFLAGS) -I$(BUILD_DIR) -Iinclude -c -o $@ $<
 
-# Clean generated files
+# Compile parser
+$(BUILD_DIR)/parser.tab.o: $(BUILD_DIR)/parser.tab.c
+	$(CC) $(CFLAGS) -I$(BUILD_DIR) -Iinclude -c -o $@ $<
+
+# Compile parser implementation
+$(BUILD_DIR)/parser.o: $(PARSER_DIR)/parser.c $(BUILD_DIR)/parser.tab.h
+	$(CC) $(CFLAGS) -I$(BUILD_DIR) -Iinclude -c -o $@ $<
+
+# Compile test program
+$(BUILD_DIR)/parser_test.o: $(TEST_DIR)/parser_test.c $(BUILD_DIR)/parser.tab.h
+	$(CC) $(CFLAGS) -I$(BUILD_DIR) -Iinclude -c -o $@ $<
+
+# Link everything
+$(BUILD_DIR)/parser_test: $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/parser.tab.o $(BUILD_DIR)/parser.o $(BUILD_DIR)/parser_test.o
+	$(CC) -o $@ $^
+
 clean:
-	rm -f $(SCANNER_GEN)
 	rm -rf $(BUILD_DIR)
+
+.PHONY: all clean
