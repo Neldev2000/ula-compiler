@@ -82,6 +82,9 @@ void exit_block() {
 %token <str_val> TOKEN_IP_ADDRESS TOKEN_IP_CIDR TOKEN_IP_RANGE
 %token <str_val> TOKEN_IPV6_ADDRESS TOKEN_IPV6_CIDR TOKEN_IPV6_RANGE
 
+/* UNKNOWN */
+%token TOKEN_UNKNOWN
+
 /* Non-terminals */
 %type <str_val> any_identifier property_name section_name
 
