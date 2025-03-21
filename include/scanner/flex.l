@@ -115,6 +115,6 @@ IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
 {NUMBER}        { return TOKEN_NUMBER; }
 {STRING}        { return TOKEN_STRING; }
 
-.               { printf("Error: unexpected character %s at line %d\n", yytext, line_number); }
+.               { printf("Error: unexpected character %s at line %d\n", yytext, line_number); return TOKEN_UNKNOWN; }
 
 %%
