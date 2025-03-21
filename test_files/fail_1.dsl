@@ -1,4 +1,4 @@
-# Simple FAIL test file
+# Simple FAIL test file (it should be vendor = instead of vendor: )
 device:
     vendor: "mikrotik"
     model = "test"

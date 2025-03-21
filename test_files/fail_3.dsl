@@ -1,4 +1,4 @@
-# Simple test file
+# Simple FAIL test file (it shouldn´t have semi-colons, they are not in the DSL language) 
 device:
     vendor = "mikrotik";
     model = "test";

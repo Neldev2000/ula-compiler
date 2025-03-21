@@ -1,3 +1,4 @@
+# Simple FAIL test file 2 (it should be device instead of deviceS)
 deviceS:
     vendor = "mikrotik"
 
