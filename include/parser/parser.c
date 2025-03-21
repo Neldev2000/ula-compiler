@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     printf("Parsing %s...\n", argv[1]);
     
     /* Enable parser debugging */
-    yydebug = 1;
+    // yydebug = 1;
     
     int parse_result = yyparse();
 

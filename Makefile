@@ -7,9 +7,8 @@ BISON = bison
 BUILD_DIR = build
 PARSER_DIR = include/parser
 SCANNER_DIR = include/scanner
-TEST_DIR = test
 
-all: $(BUILD_DIR)/parser_test
+all: $(BUILD_DIR)/parser
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -34,12 +33,8 @@ $(BUILD_DIR)/parser.tab.o: $(BUILD_DIR)/parser.tab.c
 $(BUILD_DIR)/parser.o: $(PARSER_DIR)/parser.c $(BUILD_DIR)/parser.tab.h
 	$(CC) $(CFLAGS) -I$(BUILD_DIR) -Iinclude -c -o $@ $<
 
-# Compile test program
-$(BUILD_DIR)/parser_test.o: $(TEST_DIR)/parser_test.c $(BUILD_DIR)/parser.tab.h
-	$(CC) $(CFLAGS) -I$(BUILD_DIR) -Iinclude -c -o $@ $<
-
 # Link everything
-$(BUILD_DIR)/parser_test: $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/parser.tab.o $(BUILD_DIR)/parser.o $(BUILD_DIR)/parser_test.o
+$(BUILD_DIR)/parser: $(BUILD_DIR)/lex.yy.o $(BUILD_DIR)/parser.tab.o $(BUILD_DIR)/parser.o
 	$(CC) -o $@ $^
 
 clean:
