@@ -63,6 +63,7 @@ void exit_block() {
 %token TOKEN_COLON TOKEN_EQUALS TOKEN_LEFT_BRACKET TOKEN_RIGHT_BRACKET
 %token TOKEN_LEFT_BRACE TOKEN_RIGHT_BRACE TOKEN_COMMA TOKEN_SLASH
 %token TOKEN_MINUS TOKEN_DOT
+%token TOKEN_SEMICOLON  /* Add semicolon token to explicitly handle it */
 
 /* Keyword tokens */
 %token TOKEN_DEVICE TOKEN_VENDOR TOKEN_INTERFACES TOKEN_IP TOKEN_ROUTING
@@ -148,6 +149,34 @@ statement_list
 statement
     : property_statement
     | subsection_statement
+    | error_statement  /* Add a rule to catch syntax errors */
+    ;
+
+error_statement
+    : TOKEN_SEMICOLON {
+        yyerror("Semicolons are not allowed in this DSL");
+        YYERROR;  /* Force error handling */
+    }
+    | TOKEN_UNKNOWN {
+        yyerror("Unknown token or invalid syntax encountered");
+        YYERROR;
+    }
+    | property_name error {
+        yyerror("Invalid property assignment syntax");
+        YYERROR;
+    }
+    | value error {
+        yyerror("Unexpected token after value");
+        YYERROR;
+    }
+    | error TOKEN_EQUALS {
+        yyerror("Invalid token before equals sign");
+        YYERROR;
+    }
+    | error TOKEN_COLON {
+        yyerror("Invalid token before colon");
+        YYERROR;
+    }
     ;
 
 property_statement
@@ -159,6 +188,16 @@ subsection_statement
         enter_block($1);  /* Entering a nested block */
     } block {
         exit_block();   /* Exiting a nested block */
+    }
+    | any_identifier TOKEN_COLON TOKEN_SEMICOLON {
+        /* Explicitly catch the case where a semicolon follows a colon */
+        yyerror("Invalid syntax: semicolon after colon. After a section declaration, only a newline or comment is allowed");
+        YYERROR;
+    }
+    | any_identifier TOKEN_COLON error {
+        /* Catch any other token after a colon that's not followed by valid block content */
+        yyerror("Invalid syntax after colon. After a section declaration, only a newline or comment is allowed");
+        YYERROR;
     }
     ;
 

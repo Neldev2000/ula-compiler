@@ -7,5 +7,5 @@ interfaces:
     ether1:
         type = "ethernet";
         description = "Test interface";
-        ip:
-            address = 192.168.1.1/24; 
+        ip: """ THIS COMMENT IS ALLOWED, BUT NOT THE SEMICOLON """;
+            address = 192.168.1.1/24 ;

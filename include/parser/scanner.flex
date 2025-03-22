@@ -67,6 +67,7 @@ IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
 "/"             { printf("SLASH\n"); return TOKEN_SLASH; }
 "-"             { printf("MINUS\n"); return TOKEN_MINUS; }
 "."             { printf("DOT\n"); return TOKEN_DOT; }
+";"             { printf("SEMICOLON\n"); return TOKEN_SEMICOLON; }
 
 "device"        { printf("DEVICE\n"); return TOKEN_DEVICE; }
 "vendor"        { printf("VENDOR\n"); return TOKEN_VENDOR; }
@@ -116,6 +117,6 @@ IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
 {NUMBER}        { printf("NUMBER: %s\n", yytext); return TOKEN_NUMBER; }
 {STRING}        { printf("STRING: %s\n", yytext); return TOKEN_STRING; }
 
-.               { printf("ERROR: unexpected character %s at line %d\n", yytext, line_number); }
+.               { printf("ERROR: unexpected character %s at line %d\n", yytext, line_number); return TOKEN_UNKNOWN; }
 
 %% 
