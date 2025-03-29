@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "expressions.hpp"
 
 extern int yylex();
 extern char* yytext;
@@ -9,24 +10,28 @@ extern int line_number;
 extern FILE* yyin;
 int yyerror(const char* s);
 
-/* For section tracking */
-typedef enum {
-    SECTION_NONE,
-    SECTION_DEVICE,
-    SECTION_INTERFACES,
-    SECTION_IP,
-    SECTION_ROUTING,
-    SECTION_FIREWALL,
-    SECTION_SYSTEM
-} SectionType;
+// Global result for the parser
+Configuration* parser_result = nullptr;
 
-SectionType current_section = SECTION_NONE;
+// Helper function to map string to SectionType
+SectionType get_section_type(const char* section_name) {
+    if (strcmp(section_name, "device") == 0) return SectionType::DEVICE;
+    else if (strcmp(section_name, "interfaces") == 0) return SectionType::INTERFACES;
+    else if (strcmp(section_name, "ip") == 0) return SectionType::IP;
+    else if (strcmp(section_name, "routing") == 0) return SectionType::ROUTING;
+    else if (strcmp(section_name, "firewall") == 0) return SectionType::FIREWALL;
+    else if (strcmp(section_name, "system") == 0) return SectionType::SYSTEM;
+    else return SectionType::NONE;
+}
+
+// Debug logging functions - no longer using the old enum
+SectionType current_section = SectionType::NONE;
 int nesting_level = 0;
 
 void enter_section(SectionType section, const char* name) {
     current_section = section;
     nesting_level = 1;
-    printf("Debug: Entering section %d (%s)\n", section, name);
+    printf("Debug: Entering section %s\n", name);
 }
 
 void enter_block(const char* name) {
@@ -39,7 +44,7 @@ void exit_block() {
     printf("Debug: Decreasing nesting to %d\n", nesting_level);
     
     if (nesting_level == 0) {
-        current_section = SECTION_NONE;
+        current_section = SectionType::NONE;
         printf("Debug: Leaving section\n");
     }
 }
@@ -53,17 +58,24 @@ void exit_block() {
 /* Enable debugging features */
 /* %define parse.trace */ /* Commented out to avoid redefinition warning */
 
-/* Define value types for tokens */
+/* Define value types for tokens and non-terminals */
 %union {
     const char* str_val;
     int int_val;
+    ConfigNode* node_val;
+    Section* section_val;
+    Block* block_val;
+    Property* property_val;
+    Value* value_val;
+    ListValue* list_val;
+    Configuration* config_val;
 }
 
 /* Tokens from flex scanner */
 %token TOKEN_COLON TOKEN_EQUALS TOKEN_LEFT_BRACKET TOKEN_RIGHT_BRACKET
 %token TOKEN_LEFT_BRACE TOKEN_RIGHT_BRACE TOKEN_COMMA TOKEN_SLASH
 %token TOKEN_MINUS TOKEN_DOT
-%token TOKEN_SEMICOLON  /* Add semicolon token to explicitly handle it */
+%token TOKEN_SEMICOLON
 
 /* Keyword tokens */
 %token TOKEN_DEVICE TOKEN_VENDOR TOKEN_INTERFACES TOKEN_IP TOKEN_ROUTING
@@ -87,13 +99,15 @@ void exit_block() {
 %token TOKEN_UNKNOWN
 
 /* Non-terminals */
-%type <str_val> any_identifier property_name section_name
-
-/* Define precedence to help resolve shift/reduce conflicts */
-%left TOKEN_COLON
-%left TOKEN_EQUALS
-%left TOKEN_COMMA
-%left TOKEN_LEFT_BRACKET TOKEN_RIGHT_BRACKET
+%type <str_val> property_name section_name any_identifier
+%type <config_val> config
+%type <section_val> section section_list
+%type <block_val> block statement_list
+%type <node_val> statement property_statement subsection_statement
+%type <value_val> simple_value value_item
+%type <list_val> list_value value_list
+%type <node_val> value
+%type <node_val> error_statement
 
 /* Start symbol */
 %start config
@@ -101,28 +115,28 @@ void exit_block() {
 %%
 
 config
-    : section_list
-    ;
-
-section_list
-    : section
-    | section_list section
-    ;
-
-section
-    : section_header block {
-        exit_block();  /* When a section is complete, reset section context */
+    : section_list {
+        parser_result = new Configuration();
+        if ($1 != nullptr) {
+            parser_result->add_section($1);
+        }
+        $$ = parser_result;
+    }
+    | config section {
+        if ($2 != nullptr) {
+            parser_result->add_section($2);
+        }
+        $$ = parser_result;
     }
     ;
 
-section_header
-    : section_name TOKEN_COLON {
-        if (strcmp($1, "device") == 0) enter_section(SECTION_DEVICE, "device");
-        else if (strcmp($1, "interfaces") == 0) enter_section(SECTION_INTERFACES, "interfaces");
-        else if (strcmp($1, "ip") == 0) enter_section(SECTION_IP, "ip");
-        else if (strcmp($1, "routing") == 0) enter_section(SECTION_ROUTING, "routing");
-        else if (strcmp($1, "firewall") == 0) enter_section(SECTION_FIREWALL, "firewall");
-        else if (strcmp($1, "system") == 0) enter_section(SECTION_SYSTEM, "system");
+section_list
+    : section { $$ = $1; }
+    ;
+
+section
+    : section_name TOKEN_COLON block {
+        $$ = new Section($1, get_section_type($1), $3);
     }
     ;
 
@@ -136,74 +150,96 @@ section_name
     ;
 
 block
-    : /* empty */
-    | TOKEN_LEFT_BRACE statement_list TOKEN_RIGHT_BRACE
-    | statement_list
+    : /* empty */ {
+        $$ = new Block();
+    }
+    | TOKEN_LEFT_BRACE statement_list TOKEN_RIGHT_BRACE {
+        $$ = $2;
+    }
+    | statement_list {
+        $$ = $1;
+    }
     ;
 
 statement_list
-    : statement
-    | statement_list statement
+    : statement {
+        $$ = new Block();
+        if ($1 != nullptr) {
+            $$->add_statement($1);
+        }
+    }
+    | statement_list statement {
+        $$ = $1;
+        if ($2 != nullptr) {
+            $$->add_statement($2);
+        }
+    }
     ;
 
 statement
-    : property_statement
-    | subsection_statement
-    | error_statement  /* Add a rule to catch syntax errors */
+    : property_statement { $$ = $1; }
+    | subsection_statement { $$ = $1; }
+    | error_statement { $$ = nullptr; }
     ;
 
 error_statement
     : TOKEN_SEMICOLON {
         yyerror("Semicolons are not allowed in this DSL");
-        YYERROR;  /* Force error handling */
+        YYERROR;
+        $$ = nullptr;
     }
     | TOKEN_UNKNOWN {
         yyerror("Unknown token or invalid syntax encountered");
         YYERROR;
+        $$ = nullptr;
     }
     | property_name error {
         yyerror("Invalid property assignment syntax");
         YYERROR;
+        $$ = nullptr;
     }
     | value error {
         yyerror("Unexpected token after value");
         YYERROR;
+        $$ = nullptr;
     }
     | error TOKEN_EQUALS {
         yyerror("Invalid token before equals sign");
         YYERROR;
+        $$ = nullptr;
     }
     | error TOKEN_COLON {
         yyerror("Invalid token before colon");
         YYERROR;
+        $$ = nullptr;
     }
     ;
 
 property_statement
-    : property_name TOKEN_EQUALS value
+    : property_name TOKEN_EQUALS value {
+        $$ = new Property($1, $3);
+    }
     ;
 
 subsection_statement
-    : any_identifier TOKEN_COLON {
-        enter_block($1);  /* Entering a nested block */
-    } block {
-        exit_block();   /* Exiting a nested block */
+    : any_identifier TOKEN_COLON block {
+        $$ = new Section($1, SectionType::NONE, $3);
     }
     | any_identifier TOKEN_COLON TOKEN_SEMICOLON {
-        /* Explicitly catch the case where a semicolon follows a colon */
         yyerror("Invalid syntax: semicolon after colon. After a section declaration, only a newline or comment is allowed");
         YYERROR;
+        $$ = nullptr;
     }
     | any_identifier TOKEN_COLON error {
-        /* Catch any other token after a colon that's not followed by valid block content */
         yyerror("Invalid syntax after colon. After a section declaration, only a newline or comment is allowed");
         YYERROR;
+        $$ = nullptr;
     }
     ;
 
 /* Generic property name to cover all token types that can appear before equals */
 property_name
-    : TOKEN_IDENTIFIER { $$ = (const char*)strdup(yytext); }
+    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
     | TOKEN_VENDOR { $$ = "vendor"; }
     | TOKEN_TYPE { $$ = "type"; }
     | TOKEN_ADMIN_STATE { $$ = "admin_state"; }
@@ -223,7 +259,7 @@ property_name
 
 /* Generic identifier to cover all token types that can appear before colon */
 any_identifier
-    : TOKEN_IDENTIFIER { $$ = (const char*)strdup(yytext); }
+    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
     | TOKEN_ETHERNET { $$ = "ethernet"; }
     | TOKEN_VLAN { $$ = "vlan"; }
     | TOKEN_IP { $$ = "ip"; }
@@ -233,39 +269,91 @@ any_identifier
     ;
 
 value
-    : simple_value
-    | list_value
+    : simple_value { $$ = $1; }
+    | list_value { $$ = $1; }
     ;
 
 simple_value
-    : TOKEN_STRING
-    | TOKEN_NUMBER
-    | TOKEN_BOOL
-    | TOKEN_IP_ADDRESS
-    | TOKEN_IP_CIDR
-    | TOKEN_IP_RANGE
-    | TOKEN_IPV6_ADDRESS
-    | TOKEN_IPV6_CIDR
-    | TOKEN_IPV6_RANGE
-    | TOKEN_ENABLED
-    | TOKEN_DISABLED
-    | TOKEN_INPUT
-    | TOKEN_OUTPUT
-    | TOKEN_FORWARD
-    | TOKEN_SRCNAT
-    | TOKEN_ACCEPT
-    | TOKEN_DROP
-    | TOKEN_REJECT
-    | TOKEN_MASQUERADE
+    : TOKEN_STRING { 
+        $$ = new Value($1, ValueType::STRING); 
+    }
+    | TOKEN_NUMBER { 
+        char buffer[64];
+        snprintf(buffer, sizeof(buffer), "%d", $1);
+        $$ = new Value(buffer, ValueType::NUMBER); 
+    }
+    | TOKEN_BOOL { 
+        $$ = new Value($1, ValueType::BOOLEAN); 
+    }
+    | TOKEN_IP_ADDRESS { 
+        $$ = new Value($1, ValueType::IP_ADDRESS); 
+    }
+    | TOKEN_IP_CIDR { 
+        $$ = new Value($1, ValueType::IP_CIDR); 
+    }
+    | TOKEN_IP_RANGE { 
+        $$ = new Value($1, ValueType::IP_RANGE); 
+    }
+    | TOKEN_IPV6_ADDRESS { 
+        $$ = new Value($1, ValueType::IPV6_ADDRESS); 
+    }
+    | TOKEN_IPV6_CIDR { 
+        $$ = new Value($1, ValueType::IPV6_CIDR); 
+    }
+    | TOKEN_IPV6_RANGE { 
+        $$ = new Value($1, ValueType::IPV6_RANGE); 
+    }
+    | TOKEN_ENABLED { 
+        $$ = new Value("enabled", ValueType::KEYWORD); 
+    }
+    | TOKEN_DISABLED { 
+        $$ = new Value("disabled", ValueType::KEYWORD); 
+    }
+    | TOKEN_INPUT { 
+        $$ = new Value("input", ValueType::KEYWORD); 
+    }
+    | TOKEN_OUTPUT { 
+        $$ = new Value("output", ValueType::KEYWORD); 
+    }
+    | TOKEN_FORWARD { 
+        $$ = new Value("forward", ValueType::KEYWORD); 
+    }
+    | TOKEN_SRCNAT { 
+        $$ = new Value("srcnat", ValueType::KEYWORD); 
+    }
+    | TOKEN_ACCEPT { 
+        $$ = new Value("accept", ValueType::KEYWORD); 
+    }
+    | TOKEN_DROP { 
+        $$ = new Value("drop", ValueType::KEYWORD); 
+    }
+    | TOKEN_REJECT { 
+        $$ = new Value("reject", ValueType::KEYWORD); 
+    }
+    | TOKEN_MASQUERADE { 
+        $$ = new Value("masquerade", ValueType::KEYWORD); 
+    }
     ;
 
 list_value
-    : TOKEN_LEFT_BRACKET value_list TOKEN_RIGHT_BRACKET
+    : TOKEN_LEFT_BRACKET value_list TOKEN_RIGHT_BRACKET { 
+        $$ = $2; 
+    }
     ;
 
 value_list
-    : simple_value
-    | value_list TOKEN_COMMA simple_value
+    : value_item { 
+        $$ = new ListValue();
+        $$->add_value($1);
+    }
+    | value_list TOKEN_COMMA value_item { 
+        $$ = $1;
+        $$->add_value($3);
+    }
+    ;
+
+value_item
+    : simple_value { $$ = $1; }
     ;
 
 %%

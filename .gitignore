@@ -2,3 +2,5 @@
 *.sh
 /examples/*
 /build/*
+/bin/*
+/bin/parser/*

@@ -2,7 +2,8 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
-    #include "token.h"
+    #include "expressions.hpp"
+    #include "parser.tab.h"
 
     int line_number = 1;
     #define YY_USER_ACTION { printf("Scanner: token at line %d: %s\n", line_number, yytext); }
@@ -106,16 +107,16 @@ IPV6_RANGE      {IPV6_ADDRESS}\-{IPV6_ADDRESS}
 "drop"          { printf("DROP\n"); return TOKEN_DROP; }
 "reject"        { printf("REJECT\n"); return TOKEN_REJECT; }
 
-{IPV6_CIDR}     { printf("IPV6_CIDR: %s\n", yytext); return TOKEN_IPV6_CIDR; }
-{IPV6_RANGE}    { printf("IPV6_RANGE: %s\n", yytext); return TOKEN_IPV6_RANGE; }
-{IPV6_ADDRESS}  { printf("IPV6_ADDRESS: %s\n", yytext); return TOKEN_IPV6_ADDRESS; }
-{IP_CIDR}       { printf("IP_CIDR: %s\n", yytext); return TOKEN_IP_CIDR; }
-{IP_RANGE}      { printf("IP_RANGE: %s\n", yytext); return TOKEN_IP_RANGE; }
-{IP_ADDRESS}    { printf("IP_ADDRESS: %s\n", yytext); return TOKEN_IP_ADDRESS; }
-{BOOL}          { printf("BOOL: %s\n", yytext); return TOKEN_BOOL; }
-{IDENTIFIER}    { printf("IDENTIFIER: %s\n", yytext); return TOKEN_IDENTIFIER; }
-{NUMBER}        { printf("NUMBER: %s\n", yytext); return TOKEN_NUMBER; }
-{STRING}        { printf("STRING: %s\n", yytext); return TOKEN_STRING; }
+{IPV6_CIDR}     { printf("IPV6_CIDR: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IPV6_CIDR; }
+{IPV6_RANGE}    { printf("IPV6_RANGE: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IPV6_RANGE; }
+{IPV6_ADDRESS}  { printf("IPV6_ADDRESS: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IPV6_ADDRESS; }
+{IP_CIDR}       { printf("IP_CIDR: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IP_CIDR; }
+{IP_RANGE}      { printf("IP_RANGE: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IP_RANGE; }
+{IP_ADDRESS}    { printf("IP_ADDRESS: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IP_ADDRESS; }
+{BOOL}          { printf("BOOL: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_BOOL; }
+{IDENTIFIER}    { printf("IDENTIFIER: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_IDENTIFIER; }
+{NUMBER}        { printf("NUMBER: %s\n", yytext); yylval.int_val = atoi(yytext); return TOKEN_NUMBER; }
+{STRING}        { printf("STRING: %s\n", yytext); yylval.str_val = strdup(yytext); return TOKEN_STRING; }
 
 .               { printf("ERROR: unexpected character %s at line %d\n", yytext, line_number); return TOKEN_UNKNOWN; }
 
