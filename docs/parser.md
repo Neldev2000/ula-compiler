@@ -16,6 +16,36 @@ We use a technique called **LALR(1)** (Look-Ahead LR) parsing for this DSL. Here
 
 We chose LALR(1) because it's well-suited for hierarchical configurations like our DSL, where sections can contain other sections and properties. It's also efficient enough to handle large configuration files without performance issues.
 
+### Why LALR(1) and Not Other Grammar Types?
+
+We specifically chose LALR(1) over other common grammar types for several technical reasons:
+
+#### Comparison with LL Grammars (LL(0), LL(1))
+
+- **LL(0)** parsers, also known as predictive parsers without lookahead, are too restrictive for our DSL. They cannot handle ambiguities that naturally arise in network configuration syntax, such as distinguishing between different types of property assignments or nested sections without looking ahead.
+
+- **LL(1)** parsers (top-down parsers with one token lookahead) would require excessive grammar transformations to handle our DSL:
+  - Left-recursion elimination would be necessary for expressions like nested sections
+  - The left-factoring required would make the grammar less intuitive and harder to maintain
+  - Our DSL has constructs that are inherently easier to parse bottom-up than top-down
+
+#### Comparison with Full LR(1)
+
+- **LR(1)** parsers are more powerful than LALR(1) but at a cost:
+  - They generate much larger parsing tables (often exponentially larger)
+  - They require more memory and can be slower to execute
+  - The additional power of LR(1) isn't necessary for our DSL's grammar
+
+#### Why LALR(1) is the Right Choice
+
+- **Practical implementation**: Using Bison (which implements LALR(1)) gives us a robust, well-tested parser generator
+- **Efficient parsing**: LALR(1) parsers have compact parse tables compared to LR(1)
+- **Sufficient power**: LALR(1) can handle the entire range of our DSL syntax without limitation
+- **Error handling**: Provides better error diagnostics than LL parsers, allowing us to give users clear feedback on syntax errors
+- **Handles ambiguity**: Can resolve common ambiguities in network configuration syntax with minimal grammar complexity
+
+LALR(1) strikes the optimal balance for our DSL between parser complexity, runtime efficiency, and grammar expressiveness.
+
 The parser keeps track of the current section (device, interfaces, etc.) and nesting level as it processes the configuration, which helps it understand the context of each statement.
 
 ## DSL Language Basics
@@ -173,6 +203,80 @@ firewall:
             connection_state = ["established", "related"]
             action = "accept"
 ```
+
+## Class-Based Configuration Representation
+
+Our parser implementation uses a robust object-oriented approach to represent and manipulate network configurations through the `expressions.hpp` and `expressions.cpp` files.
+
+### Configuration Class Hierarchy
+
+The implementation follows a hierarchical class structure with `ConfigNode` as the base class:
+
+- **ConfigNode (Abstract Base Class)**:
+  - Defines the interface for all configuration components
+  - Provides virtual methods for resource cleanup and string representation
+  - Ensures polymorphic behavior throughout the configuration tree
+
+- **Value**:
+  - Represents primitive values in the configuration (strings, numbers, booleans, IP addresses)
+  - Each value has both a content and a type (ValueType enum)
+  - Types include STRING, NUMBER, BOOLEAN, IP_ADDRESS, IP_CIDR, and others
+
+- **ListValue**:
+  - Represents lists of values, such as multiple IP addresses or firewall rules
+  - Maintains and manages a vector of Value objects
+  - Provides iteration and access to the contained values
+
+- **Property**:
+  - Represents a configuration property with a name and a value
+  - Example: `vendor = "mikrotik"` or `admin_state = "enabled"`
+  - Value can be a simple Value or a more complex ListValue
+
+- **Block**:
+  - Represents a collection of configuration statements (properties or subsections)
+  - Maintains a vector of statements and provides iteration over them
+  - Used to group related configuration elements
+
+- **Section**:
+  - Represents a named section in the configuration with a specific type
+  - Section types are defined in the SectionType enum (DEVICE, INTERFACES, IP, etc.)
+  - Contains a Block of statements for the section contents
+
+- **Configuration**:
+  - Top-level class that represents the entire network configuration
+  - Contains a collection of Section objects
+  - Serves as the entry point for the parsed configuration
+
+### Advantages of This Class Design
+
+This class-based approach offers several benefits:
+
+1. **Hierarchical Representation**: Mirrors the natural structure of network configurations
+2. **Type Safety**: Each configuration element has a specific type with appropriate operations
+3. **Memory Management**: Structured cleanup through virtual destroy() methods prevents memory leaks
+4. **Validation Support**: Enables type-specific validation of configuration values
+5. **Serialization**: Easy conversion to string representation via to_string() methods
+6. **Traversal**: Simple traversal of the configuration tree for analysis or transformation
+
+### Integration with the Parser
+
+The Bison parser (`parser.bison`) constructs this object hierarchy as it recognizes grammar patterns:
+
+1. When tokens are recognized, appropriate objects (Value, Property, etc.) are instantiated
+2. These objects are combined into more complex structures according to grammar rules
+3. Sections are populated with properties and nested sections
+4. The final result is a complete Configuration object that represents the parsed network configuration
+5. The parser stores this result in the `parser_result` variable for further processing
+
+### Configuration Evaluation and Representation
+
+Each class implements:
+
+- **destroy()**: Properly cleans up resources used by the configuration structure
+- **to_string()**: Converts the configuration element to a human-readable string form
+- **get_** methods: Provide access to the internal data of each configuration element
+
+This design pattern allows for efficient parsing while maintaining a clean separation between the parser's grammar rules and the semantic representation of parsed network configurations. The resulting object hierarchy can be easily traversed, analyzed, and transformed for various purposes, such as validation, optimization, or generation of device-specific commands.
 
 ## Conclusion
 
