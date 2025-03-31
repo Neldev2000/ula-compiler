@@ -35,82 +35,103 @@
 
 int main() 
 {
-    // Create the program (root) declaration
+    // Create the program declaration with default constructor
     auto program = new ProgramDeclaration();
     
     // ---- DEVICE SECTION ----
-    // Create the device section with block
-    auto device_block = new BlockStatement();
-    device_block->add_statement(new PropertyStatement("vendor", new StringValue("mikrotik")));
-    device_block->add_statement(new PropertyStatement("model", new StringValue("CCR2004-1G-12S+2XS")));
-    
-    auto device_section = new SectionStatement("device", SectionStatement::SectionType::DEVICE, device_block);
+    auto device_section = new SectionStatement{
+        "device", 
+        SectionStatement::SectionType::DEVICE,
+        new BlockStatement{
+            {
+                new PropertyStatement{"vendor", new StringValue{"mikrotik"}},
+                new PropertyStatement{"model", new StringValue{"CCR2004-1G-12S+2XS"}}
+            }
+        }
+    };
     program->add_section(device_section);
     
     // ---- INTERFACES SECTION ----
-    // Create the interfaces section with block
-    auto interfaces_block = new BlockStatement();
-    
-    // Create ether1 interface
-    auto ether1_block = new BlockStatement();
-    ether1_block->add_statement(new PropertyStatement("type", new StringValue("ethernet")));
-    ether1_block->add_statement(new PropertyStatement("admin_state", new StringValue("enabled")));
-    
-    // Create IP subsection for ether1
-    auto ip_block = new BlockStatement();
-    ip_block->add_statement(new PropertyStatement("address", new IPCIDRValue("192.168.1.1/24")));
-    
-    auto ip_section = new SectionStatement("ip", SectionStatement::SectionType::IP, ip_block);
-    ether1_block->add_statement(ip_section);
-    
-    auto ether1_section = new SectionStatement("ether1", SectionStatement::SectionType::CUSTOM, ether1_block);
-    interfaces_block->add_statement(ether1_section);
-    
-    // Create ether2 interface
-    auto ether2_block = new BlockStatement();
-    ether2_block->add_statement(new PropertyStatement("type", new StringValue("ethernet")));
-    ether2_block->add_statement(new PropertyStatement("admin_state", new StringValue("enabled")));
-    ether2_block->add_statement(new PropertyStatement("description", new StringValue("WAN Connection")));
-    
-    auto ether2_section = new SectionStatement("ether2", SectionStatement::SectionType::CUSTOM, ether2_block);
-    interfaces_block->add_statement(ether2_section);
-    
-    auto interfaces_section = new SectionStatement("interfaces", SectionStatement::SectionType::INTERFACES, interfaces_block);
+    auto interfaces_section = new SectionStatement{
+        "interfaces",
+        SectionStatement::SectionType::INTERFACES,
+        new BlockStatement{
+            {
+                // ether1 interface
+                new SectionStatement{
+                    "ether1",
+                    SectionStatement::SectionType::CUSTOM,
+                    new BlockStatement{
+                        {
+                            new PropertyStatement{"type", new StringValue{"ethernet"}},
+                            new PropertyStatement{"admin_state", new StringValue{"enabled"}},
+                            // IP subsection
+                            new SectionStatement{
+                                "ip",
+                                SectionStatement::SectionType::IP,
+                                new BlockStatement{
+                                    {
+                                        new PropertyStatement{"address", new IPCIDRValue{"192.168.1.1/24"}}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                
+                // ether2 interface
+                new SectionStatement{
+                    "ether2",
+                    SectionStatement::SectionType::CUSTOM,
+                    new BlockStatement{
+                        {
+                            new PropertyStatement{"type", new StringValue{"ethernet"}},
+                            new PropertyStatement{"admin_state", new StringValue{"enabled"}},
+                            new PropertyStatement{"description", new StringValue{"WAN Connection"}}
+                        }
+                    }
+                }
+            }
+        }
+    };
     program->add_section(interfaces_section);
     
     // ---- FIREWALL SECTION ----
-    // Create the firewall section with block
-    auto firewall_block = new BlockStatement();
-    
-    // Create filter subsection
-    auto filter_block = new BlockStatement();
-    
-    // Create rule
-    auto rule_block = new BlockStatement();
-    rule_block->add_statement(new PropertyStatement("chain", new StringValue("input")));
-    
-    // Create connection states list
-    ValueList conn_states;
-    conn_states.push_back(new StringValue("established"));
-    conn_states.push_back(new StringValue("related"));
-    auto conn_states_list = new ListValue(conn_states);
-    
-    rule_block->add_statement(new PropertyStatement("connection_state", conn_states_list));
-    rule_block->add_statement(new PropertyStatement("action", new StringValue("accept")));
-    
-    auto rule_section = new SectionStatement("input_accept_established", 
-                                            SectionStatement::SectionType::CUSTOM, 
-                                            rule_block);
-    filter_block->add_statement(rule_section);
-    
-    auto filter_section = new SectionStatement("filter", 
-                                              SectionStatement::SectionType::CUSTOM, 
-                                              filter_block);
-    firewall_block->add_statement(filter_section);
-    
-    auto firewall_section = new SectionStatement("firewall", 
-                                               SectionStatement::SectionType::FIREWALL, 
-                                               firewall_block);
+    auto firewall_section = new SectionStatement{
+        "firewall",
+        SectionStatement::SectionType::FIREWALL,
+        new BlockStatement{
+            {
+                new SectionStatement{
+                    "filter",
+                    SectionStatement::SectionType::CUSTOM,
+                    new BlockStatement{
+                        {
+                            new SectionStatement{
+                                "input_accept_established",
+                                SectionStatement::SectionType::CUSTOM,
+                                new BlockStatement{
+                                    {
+                                        new PropertyStatement{"chain", new StringValue{"input"}},
+                                        new PropertyStatement{
+                                            "connection_state", 
+                                            new ListValue{
+                                                {
+                                                    new StringValue{"established"},
+                                                    new StringValue{"related"}
+                                                }
+                                            }
+                                        },
+                                        new PropertyStatement{"action", new StringValue{"accept"}}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
     program->add_section(firewall_section);
     
     // ---- PRINT THE AST ----
