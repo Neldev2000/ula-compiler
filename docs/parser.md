@@ -1,190 +1,98 @@
-# Parsing the DSL Language for Mikrotik Network Configuration
+# Análisis Sintáctico para el DSL de Configuración Mikrotik
 
-## What is the Parser?
+## Introducción
 
-The parser is a component that reads the structured text of our Mikrotik DSL (Domain Specific Language) and checks if it follows the rules of the language. Think of it as a proofreader that ensures your configuration follows the correct syntax.
+El analizador sintáctico (parser) constituye la segunda fase fundamental en el proceso de compilación de nuestro Lenguaje Específico de Dominio (DSL) orientado a la configuración de dispositivos Mikrotik. Este componente es responsable de analizar la secuencia de tokens generada por el analizador léxico y determinar si cumple con las reglas gramaticales del lenguaje. El parser transforma la secuencia lineal de tokens en una estructura jerárquica que refleja la organización lógica de la configuración de red.
 
-If the syntax is valid, the parser accepts the configuration. If there are syntax errors, the parser will reject it and provide helpful error messages explaining what went wrong.
+## Objetivos del Diseño del Parser
 
-## Our Parsing Approach
+- **Precisión Sintáctica**: Garantizar que las configuraciones sigan estrictamente las reglas definidas en la gramática del DSL.
+- **Detección de Errores**: Proporcionar mensajes de error claros y específicos que faciliten la corrección de problemas sintácticos.
+- **Representación Jerárquica**: Construir una estructura de datos que refleje la naturaleza anidada de las configuraciones de red.
+- **Eficiencia Computacional**: Implementar un análisis sintáctico eficiente y escalable para procesar configuraciones complejas.
+- **Integración Semántica**: Sentar las bases para el posterior análisis semántico y generación de código.
 
-We use a technique called **LALR(1)** (Look-Ahead LR) parsing for this DSL. Here's what that means in simple terms:
+## Enfoque de Análisis Sintáctico
 
-- **Bottom-up parsing**: The parser reads the input from left to right and builds the structure from the smallest pieces up to larger ones.
-- **Context awareness**: It uses one token of "look-ahead" to make decisions about how to interpret the current part of the configuration.
-- **Efficient processing**: LALR(1) offers a good balance between power (what it can recognize) and performance (how fast it works).
+### Técnica LALR(1)
 
-We chose LALR(1) because it's well-suited for hierarchical configurations like our DSL, where sections can contain other sections and properties. It's also efficient enough to handle large configuration files without performance issues.
+El parser de nuestro DSL está implementado utilizando la técnica LALR(1) (Look-Ahead LR), que ofrece un equilibrio óptimo entre expresividad y eficiencia:
 
-### Why LALR(1) and Not Other Grammar Types?
+- **Análisis Ascendente**: Procesa la entrada de izquierda a derecha, construyendo la estructura sintáctica desde los componentes más pequeños hasta los más grandes.
+- **Sensibilidad al Contexto**: Utiliza un token de "anticipación" (look-ahead) para tomar decisiones sobre cómo interpretar la parte actual de la configuración.
+- **Resolución de Ambigüedades**: Capaz de manejar y resolver ambigüedades comunes en la sintaxis de configuración de redes.
 
-We specifically chose LALR(1) over other common grammar types for several technical reasons:
+### Justificación de la Elección de LALR(1)
 
-#### Comparison with LL Grammars (LL(0), LL(1))
+La elección de LALR(1) sobre otras técnicas de análisis sintáctico se fundamenta en consideraciones técnicas específicas:
 
-- **LL(0)** parsers, also known as predictive parsers without lookahead, are too restrictive for our DSL. They cannot handle ambiguities that naturally arise in network configuration syntax, such as distinguishing between different types of property assignments or nested sections without looking ahead.
+#### Comparativa con Gramáticas LL (LL(0), LL(1))
 
-- **LL(1)** parsers (top-down parsers with one token lookahead) would require excessive grammar transformations to handle our DSL:
-  - Left-recursion elimination would be necessary for expressions like nested sections
-  - The left-factoring required would make the grammar less intuitive and harder to maintain
-  - Our DSL has constructs that are inherently easier to parse bottom-up than top-down
+- **LL(0)**: Los analizadores predictivos sin anticipación son demasiado restrictivos para nuestro DSL. No pueden manejar las ambigüedades que surgen naturalmente en la sintaxis de configuración de redes.
 
-#### Comparison with Full LR(1)
+- **LL(1)**: Los analizadores descendentes con un token de anticipación requerirían transformaciones excesivas en nuestra gramática:
+  - Eliminación de la recursión izquierda para expresiones como secciones anidadas
+  - La factorización izquierda necesaria haría que la gramática fuera menos intuitiva y más difícil de mantener
+  - Nuestro DSL contiene construcciones que son inherentemente más fáciles de analizar de manera ascendente que descendente
 
-- **LR(1)** parsers are more powerful than LALR(1) but at a cost:
-  - They generate much larger parsing tables (often exponentially larger)
-  - They require more memory and can be slower to execute
-  - The additional power of LR(1) isn't necessary for our DSL's grammar
+#### Comparativa con LR(1) Completo
 
-#### Why LALR(1) is the Right Choice
+- **LR(1)**: Aunque más potentes que LALR(1), los analizadores LR(1) presentan desventajas significativas:
+  - Generan tablas de análisis mucho más grandes (a menudo exponencialmente mayores)
+  - Requieren más memoria y pueden ser más lentos en ejecución
+  - La potencia adicional de LR(1) no es necesaria para la gramática de nuestro DSL
 
-- **Practical implementation**: Using Bison (which implements LALR(1)) gives us a robust, well-tested parser generator
-- **Efficient parsing**: LALR(1) parsers have compact parse tables compared to LR(1)
-- **Sufficient power**: LALR(1) can handle the entire range of our DSL syntax without limitation
-- **Error handling**: Provides better error diagnostics than LL parsers, allowing us to give users clear feedback on syntax errors
-- **Handles ambiguity**: Can resolve common ambiguities in network configuration syntax with minimal grammar complexity
+#### Ventajas de LALR(1) para Nuestro DSL
 
-LALR(1) strikes the optimal balance for our DSL between parser complexity, runtime efficiency, and grammar expressiveness.
+- **Implementación Práctica**: El uso de Bison (que implementa LALR(1)) proporciona un generador de analizadores robusto y bien probado.
+- **Análisis Eficiente**: Los analizadores LALR(1) tienen tablas de análisis compactas en comparación con LR(1).
+- **Poder Suficiente**: LALR(1) puede manejar toda la gama de sintaxis de nuestro DSL sin limitaciones.
+- **Manejo de Errores**: Proporciona mejores diagnósticos de error que los analizadores LL, permitiendo ofrecer a los usuarios comentarios claros sobre errores sintácticos.
+- **Resolución de Ambigüedades**: Puede resolver ambigüedades comunes en la sintaxis de configuración de red con mínima complejidad gramatical.
 
-The parser keeps track of the current section (device, interfaces, etc.) and nesting level as it processes the configuration, which helps it understand the context of each statement.
+## Estructura Gramatical del DSL
 
-## DSL Language Basics
+### Reglas Sintácticas Fundamentales
 
-Our DSL is designed to configure Mikrotik network devices in a human-readable format. Instead of using complex command-line instructions, the DSL uses a straightforward hierarchical structure:
+El DSL está diseñado con una sintaxis clara y concisa, enfocada en la legibilidad y facilidad de uso:
 
-### Key Syntax Rules:
+1. **Organización en Secciones**: La configuración se estructura en secciones temáticas (`device:`, `interfaces:`, etc.)
+2. **Asignación de Propiedades**: Las propiedades se asignan mediante el signo igual (`vendor = "mikrotik"`)
+3. **Estructura Jerárquica**: La jerarquía se crea utilizando dos puntos (`ether1:`)
+4. **Ausencia de Punto y Coma**: No se permiten puntos y coma al final de las declaraciones
+5. **Indentación para Legibilidad**: Se utiliza indentación para mejorar la legibilidad (aunque no es obligatoria para el parser)
 
-1. **Configuration is organized into sections** (like `device:`, `interfaces:`, etc.)
-2. **Properties are assigned using equals signs** (`vendor = "mikrotik"`)
-3. **Hierarchical structure is created using colons** (`ether1:`)
-4. **No semicolons are allowed** at the end of statements
-5. **Indentation is used** for readability (but not enforced by the parser)
+### Ejemplos de Sintaxis Válida e Inválida
 
-### Valid and Invalid Syntax Examples
-
-#### ✅ Valid syntax:
+#### ✅ Sintaxis Válida:
 ```
 device:
     vendor = "mikrotik"
     model = "CCR2004-1G-12S+2XS"
 ```
 
-#### ❌ Invalid syntax:
+#### ❌ Sintaxis Inválida:
 ```
 device:
-    vendor = "mikrotik";  # Semicolons are not allowed
+    vendor = "mikrotik";  # Los puntos y coma no están permitidos
 ```
 
-## Main Sections of the DSL
+## Componentes Principales del DSL
 
-The DSL supports six main section types:
+El DSL admite seis tipos principales de secciones:
 
-1. `device`: Basic device information
-2. `interfaces`: Network interface configuration
-3. `ip`: IP addressing and services
-4. `routing`: Routing protocols and static routes
-5. `firewall`: Firewall rules and NAT
-6. `system`: System-level configuration
+### 1. Sección `device`
 
-## Grammar Structure Explained
-
-### Sections
-
-A section is the top-level building block of the configuration:
-
-```
-device:
-    # properties and subsections go here
-```
-
-### Properties
-
-Properties are key-value pairs that define configuration attributes:
-
-```
-vendor = "mikrotik"
-model = "CCR2004"
-enabled = true
-port = 123
-address = 192.168.1.1/24
-```
-
-### Nested Blocks
-
-Blocks can be nested to create hierarchical configurations:
-
-```
-interfaces:
-    ether1:
-        type = "ethernet"
-        ethernet:
-            speed = "1Gbps"
-```
-
-### Lists
-
-Values can also be lists, enclosed in square brackets:
-
-```
-firewall:
-    filter:
-        connection_state = ["established", "related"]
-```
-
-## Common Syntax Errors
-
-Our parser provides clear error messages for common syntax issues:
-
-1. **Using semicolons**: Semicolons are not allowed in this DSL.
-   ```
-   vendor = "mikrotik";  # ERROR: Semicolons are not allowed in this DSL
-   ```
-
-2. **Invalid tokens after colon**: After a section declaration, only a newline or comment is allowed.
-   ```
-   interfaces: ;  # ERROR: Invalid syntax after colon
-   ```
-
-3. **Invalid property assignment**: 
-   ```
-   vendor $ "mikrotik"  # ERROR: Invalid property assignment syntax
-   ```
-
-4. **Unknown tokens or invalid syntax**:
-   ```
-   device: @  # ERROR: Unknown token or invalid syntax
-   ```
-
-## Handling Comments
-
-The DSL supports two types of comments:
-
-1. **Single-line comments** starting with `#`:
-   ```
-   # This is a comment
-   device:  # This is an end-of-line comment
-   ```
-
-2. **Multi-line comments** enclosed in triple quotes `"""`:
-   ```
-   """
-   This is a multi-line comment
-   that spans multiple lines
-   """
-   ```
-
-## Example Configurations
-
-### Basic Device Setup
-
+Define la información básica del dispositivo:
 ```
 device:
     vendor = "mikrotik"
     model = "CCR2004-1G-12S+2XS"
 ```
 
-### Interface Configuration
+### 2. Sección `interfaces`
 
+Configura las interfaces de red:
 ```
 interfaces:
     ether1:
@@ -193,8 +101,30 @@ interfaces:
         description = "WAN Connection"
 ```
 
-### Firewall Rule
+### 3. Sección `ip`
 
+Define direccionamiento IP y servicios relacionados:
+```
+ip:
+    address:
+        ether1 = 192.168.1.1/24
+    dhcp:
+        server:
+            enabled = true
+```
+
+### 4. Sección `routing`
+
+Configura protocolos de enrutamiento y rutas estáticas:
+```
+routing:
+    static:
+        default_gateway = 192.168.1.254
+```
+
+### 5. Sección `firewall`
+
+Define reglas de firewall y NAT:
 ```
 firewall:
     filter:
@@ -204,82 +134,180 @@ firewall:
             action = "accept"
 ```
 
-## Class-Based Configuration Representation
+### 6. Sección `system`
 
-Our parser implementation uses a robust object-oriented approach to represent and manipulate network configurations through the `expressions.hpp` and `expressions.cpp` files.
+Configuración a nivel del sistema:
+```
+system:
+    hostname = "core-router"
+    timezone = "America/Caracas"
+```
 
-### Configuration Class Hierarchy
+## Estructuras Sintácticas Fundamentales
 
-The implementation follows a hierarchical class structure with `ConfigNode` as the base class:
+### Secciones
 
-- **ConfigNode (Abstract Base Class)**:
-  - Defines the interface for all configuration components
-  - Provides virtual methods for resource cleanup and string representation
-  - Ensures polymorphic behavior throughout the configuration tree
+Las secciones son los bloques de construcción de nivel superior de la configuración:
+
+```
+device:
+    # propiedades y subsecciones aquí
+```
+
+### Propiedades
+
+Las propiedades son pares clave-valor que definen atributos de configuración:
+
+```
+vendor = "mikrotik"
+model = "CCR2004"
+enabled = true
+port = 123
+address = 192.168.1.1/24
+```
+
+### Bloques Anidados
+
+Los bloques pueden anidarse para crear configuraciones jerárquicas:
+
+```
+interfaces:
+    ether1:
+        type = "ethernet"
+        ethernet:
+            speed = "1Gbps"
+```
+
+### Listas
+
+Los valores también pueden ser listas, encerradas entre corchetes:
+
+```
+firewall:
+    filter:
+        connection_state = ["established", "related"]
+```
+
+## Errores Sintácticos Comunes
+
+Nuestro parser proporciona mensajes de error claros para problemas sintácticos comunes:
+
+1. **Uso de punto y coma**: No se permiten puntos y coma en este DSL.
+   ```
+   vendor = "mikrotik";  # ERROR: No se permiten puntos y coma en este DSL
+   ```
+
+2. **Tokens inválidos después de dos puntos**: Después de una declaración de sección, solo se permite un salto de línea o un comentario.
+   ```
+   interfaces: ;  # ERROR: Sintaxis inválida después de dos puntos
+   ```
+
+3. **Asignación de propiedad inválida**: 
+   ```
+   vendor $ "mikrotik"  # ERROR: Sintaxis de asignación de propiedad inválida
+   ```
+
+4. **Tokens desconocidos o sintaxis inválida**:
+   ```
+   device: @  # ERROR: Token desconocido o sintaxis inválida
+   ```
+
+## Manejo de Comentarios
+
+El DSL admite dos tipos de comentarios:
+
+1. **Comentarios de una sola línea** que comienzan con `#`:
+   ```
+   # Esto es un comentario
+   device:  # Esto es un comentario al final de la línea
+   ```
+
+2. **Comentarios multilínea** encerrados en comillas triples `"""`:
+   ```
+   """
+   Este es un comentario multilínea
+   que abarca varias líneas
+   """
+   ```
+
+## Representación Orientada a Objetos
+
+La implementación del parser utiliza un enfoque orientado a objetos para representar y manipular configuraciones de red a través de los archivos `expressions.hpp` y `expressions.cpp`.
+
+### Jerarquía de Clases de Configuración
+
+La implementación sigue una estructura de clases jerárquica con `ConfigNode` como clase base:
+
+#### Clase Base: ConfigNode
+
+```cpp
+class ConfigNode {
+public:
+    virtual ~ConfigNode();
+    virtual void destroy() noexcept = 0;
+    virtual std::string to_string() const noexcept = 0;
+};
+```
+
+Esta clase base abstracta define la interfaz para todos los componentes de configuración, garantizando:
+- **Limpieza de Recursos**: A través del método `destroy()`
+- **Representación Textual**: Mediante el método `to_string()` para depuración y serialización
+
+#### Jerarquía de Clases
 
 - **Value**:
-  - Represents primitive values in the configuration (strings, numbers, booleans, IP addresses)
-  - Each value has both a content and a type (ValueType enum)
-  - Types include STRING, NUMBER, BOOLEAN, IP_ADDRESS, IP_CIDR, and others
+  - Representa valores primitivos en la configuración (cadenas, números, booleanos, direcciones IP)
+  - Cada valor tiene tanto un contenido como un tipo (enumeración ValueType)
+  - Los tipos incluyen STRING, NUMBER, BOOLEAN, IP_ADDRESS, IP_CIDR, y otros
 
 - **ListValue**:
-  - Represents lists of values, such as multiple IP addresses or firewall rules
-  - Maintains and manages a vector of Value objects
-  - Provides iteration and access to the contained values
+  - Representa listas de valores, como múltiples direcciones IP o reglas de firewall
+  - Mantiene y gestiona un vector de objetos Value
+  - Proporciona iteración y acceso a los valores contenidos
 
 - **Property**:
-  - Represents a configuration property with a name and a value
-  - Example: `vendor = "mikrotik"` or `admin_state = "enabled"`
-  - Value can be a simple Value or a more complex ListValue
+  - Representa una propiedad de configuración con un nombre y un valor
+  - Ejemplo: `vendor = "mikrotik"` o `admin_state = "enabled"`
+  - El valor puede ser un Value simple o un ListValue más complejo
 
 - **Block**:
-  - Represents a collection of configuration statements (properties or subsections)
-  - Maintains a vector of statements and provides iteration over them
-  - Used to group related configuration elements
+  - Representa una colección de declaraciones de configuración (propiedades o subsecciones)
+  - Mantiene un vector de declaraciones y proporciona iteración sobre ellas
+  - Se utiliza para agrupar elementos de configuración relacionados
 
 - **Section**:
-  - Represents a named section in the configuration with a specific type
-  - Section types are defined in the SectionType enum (DEVICE, INTERFACES, IP, etc.)
-  - Contains a Block of statements for the section contents
+  - Representa una sección nombrada en la configuración con un tipo específico
+  - Los tipos de sección se definen en la enumeración SectionType (DEVICE, INTERFACES, IP, etc.)
+  - Contiene un Block de declaraciones para el contenido de la sección
 
 - **Configuration**:
-  - Top-level class that represents the entire network configuration
-  - Contains a collection of Section objects
-  - Serves as the entry point for the parsed configuration
+  - Clase de nivel superior que representa la configuración de red completa
+  - Contiene una colección de objetos Section
+  - Sirve como punto de entrada para la configuración analizada
 
-### Advantages of This Class Design
+### Ventajas de este Diseño de Clases
 
-This class-based approach offers several benefits:
+Este enfoque basado en clases ofrece varios beneficios:
 
-1. **Hierarchical Representation**: Mirrors the natural structure of network configurations
-2. **Type Safety**: Each configuration element has a specific type with appropriate operations
-3. **Memory Management**: Structured cleanup through virtual destroy() methods prevents memory leaks
-4. **Validation Support**: Enables type-specific validation of configuration values
-5. **Serialization**: Easy conversion to string representation via to_string() methods
-6. **Traversal**: Simple traversal of the configuration tree for analysis or transformation
+1. **Representación Jerárquica**: Refleja la estructura natural de las configuraciones de red
+2. **Seguridad de Tipos**: Cada elemento de configuración tiene un tipo específico con operaciones apropiadas
+3. **Gestión de Memoria**: La limpieza estructurada a través de métodos destroy() virtuales previene fugas de memoria
+4. **Soporte de Validación**: Permite la validación específica por tipo de los valores de configuración
+5. **Serialización**: Fácil conversión a representación de cadena mediante métodos to_string()
+6. **Recorrido**: Recorrido simple del árbol de configuración para análisis o transformación
 
-### Integration with the Parser
+### Integración con el Parser LALR(1)
 
-The Bison parser (`parser.bison`) constructs this object hierarchy as it recognizes grammar patterns:
+El parser Bison (`parser.bison`) construye esta jerarquía de objetos a medida que reconoce patrones gramaticales:
 
-1. When tokens are recognized, appropriate objects (Value, Property, etc.) are instantiated
-2. These objects are combined into more complex structures according to grammar rules
-3. Sections are populated with properties and nested sections
-4. The final result is a complete Configuration object that represents the parsed network configuration
-5. The parser stores this result in the `parser_result` variable for further processing
+1. Cuando se reconocen tokens, se instancian objetos apropiados (Value, Property, etc.)
+2. Estos objetos se combinan en estructuras más complejas según las reglas gramaticales
+3. Las secciones se pueblan con propiedades y secciones anidadas
+4. El resultado final es un objeto Configuration completo que representa la configuración de red analizada
+5. El parser almacena este resultado en la variable `parser_result` para su posterior procesamiento
 
-### Configuration Evaluation and Representation
+## Conclusión
 
-Each class implements:
+El analizador sintáctico está diseñado para validar y procesar configuraciones Mikrotik escritas en nuestro DSL. Impone una sintaxis limpia y legible sin puntuación innecesaria como puntos y coma, centrándose en una estructura jerárquica que refleja la organización lógica de las configuraciones de red.
 
-- **destroy()**: Properly cleans up resources used by the configuration structure
-- **to_string()**: Converts the configuration element to a human-readable string form
-- **get_** methods: Provide access to the internal data of each configuration element
-
-This design pattern allows for efficient parsing while maintaining a clean separation between the parser's grammar rules and the semantic representation of parsed network configurations. The resulting object hierarchy can be easily traversed, analyzed, and transformed for various purposes, such as validation, optimization, or generation of device-specific commands.
-
-## Conclusion
-
-The parser is designed to validate and process Mikrotik configurations written in our DSL. It enforces a clean, readable syntax without unnecessary punctuation like semicolons, focusing on a hierarchical structure that mirrors the logical organization of network configurations.
-
-By following the syntax rules described in this document, you can create valid configurations that will be accepted by the parser and eventually translated into Mikrotik-compatible commands. 
+Siguiendo las reglas sintácticas descritas en este documento, los administradores pueden crear configuraciones válidas que serán aceptadas por el parser y eventualmente traducidas a comandos compatibles con Mikrotik. Esta aproximación permite una configuración de red más intuitiva y menos propensa a errores, mejorando significativamente la experiencia del usuario y la confiabilidad de las implementaciones de red. 
