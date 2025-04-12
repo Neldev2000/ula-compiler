@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -O2 -I.
 
 # Output directory for binaries and objects
 BIN_DIR = ../../bin/ast
-
+OBJDIR = ../../obj/ast
 AST_SOURCES = ast_node_interface.cpp datatype.cpp expression.cpp statement.cpp declaration.cpp
 AST_OBJECTS = $(patsubst %.cpp,$(BIN_DIR)/%.o,$(AST_SOURCES))
 
@@ -40,4 +40,4 @@ run: $(BIN_DIR)/example
 	@$(BIN_DIR)/example
 
 clean:
-	rm -rf $(BIN_DIR) 
+	rm -rf $(BIN_DIR)  $(OBJDIR)/*
