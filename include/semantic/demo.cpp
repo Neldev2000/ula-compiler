@@ -44,35 +44,6 @@
 #include "../ast/statement.hpp"
 #include "semantic_table.hpp"
 
-// Define custom datatypes for our semantic analysis
-class ConfigSectionDatatype : public BasicDatatype
-{
-public:
-    ConfigSectionDatatype() noexcept : BasicDatatype(Datatype::Type::SECTION) {}
-    
-    void destroy() noexcept override {
-        delete this;
-    }
-    
-    std::string type_name() const override {
-        return "ConfigSection";
-    }
-};
-
-class InterfaceDatatype : public BasicDatatype
-{
-public:
-    InterfaceDatatype() noexcept : BasicDatatype(Datatype::Type::SECTION) {}
-    
-    void destroy() noexcept override {
-        delete this;
-    }
-    
-    std::string type_name() const override {
-        return "Interface";
-    }
-};
-
 int main()
 {
     // Create the program declaration with default constructor

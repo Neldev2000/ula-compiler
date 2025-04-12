@@ -74,6 +74,22 @@ public:
     IPCIDRDatatype() noexcept;
 };
 
+// Config section type (for device, interfaces, firewall sections)
+class ConfigSectionDatatype : public BasicDatatype
+{
+public:
+    ConfigSectionDatatype() noexcept;
+    std::string type_name() const override;
+};
+
+// Interface type (for network interfaces)
+class InterfaceDatatype : public BasicDatatype
+{
+public:
+    InterfaceDatatype() noexcept;
+    std::string type_name() const override;
+};
+
 // List type (for arrays of values)
 class ListDatatype : public Datatype
 {

@@ -236,17 +236,17 @@ std::pair<bool, Datatype*> expression_type_check(Expression* expr)
     if (!expr) return {false, nullptr};
 
     // Case: String value
-    if (auto str_expr = dynamic_cast<StringValue*>(expr)) {
+    if (dynamic_cast<StringValue*>(expr)) {
         return {true, new StringDatatype()};
     }
     
     // Case: Number value
-    if (auto num_expr = dynamic_cast<NumberValue*>(expr)) {
+    if (dynamic_cast<NumberValue*>(expr)) {
         return {true, new NumberDatatype()};
     }
     
     // Case: IP CIDR value
-    if (auto ip_expr = dynamic_cast<IPCIDRValue*>(expr)) {
+    if (dynamic_cast<IPCIDRValue*>(expr)) {
         return {true, new IPCIDRDatatype()};
     }
     

@@ -54,6 +54,20 @@ IPAddressDatatype::IPAddressDatatype() noexcept : BasicDatatype(Type::IP_ADDRESS
 // IPCIDRDatatype implementation
 IPCIDRDatatype::IPCIDRDatatype() noexcept : BasicDatatype(Type::IP_CIDR) {}
 
+// ConfigSectionDatatype implementation
+ConfigSectionDatatype::ConfigSectionDatatype() noexcept : BasicDatatype(Type::SECTION) {}
+
+std::string ConfigSectionDatatype::type_name() const {
+    return "ConfigSection";
+}
+
+// InterfaceDatatype implementation
+InterfaceDatatype::InterfaceDatatype() noexcept : BasicDatatype(Type::SECTION) {}
+
+std::string InterfaceDatatype::type_name() const {
+    return "Interface";
+}
+
 // ListDatatype implementation
 ListDatatype::ListDatatype(Datatype* element_type) noexcept 
     : Datatype(Type::LIST), element_type(element_type) {}
