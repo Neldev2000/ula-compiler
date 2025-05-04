@@ -27,6 +27,7 @@ public:
     // Returns a string representation of the type
     virtual std::string type_name() const;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
 
 protected:
     Type type;
@@ -38,6 +39,7 @@ class BasicDatatype : public Datatype
 public:
     BasicDatatype(Type type_value) noexcept;
     void destroy() noexcept override;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // String type (for names, descriptions, etc.)
@@ -45,6 +47,7 @@ class StringDatatype : public BasicDatatype
 {
 public:
     StringDatatype() noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // Number type (for port numbers, VLAN IDs, etc.)
@@ -52,6 +55,7 @@ class NumberDatatype : public BasicDatatype
 {
 public:
     NumberDatatype() noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // Boolean type (for enabled/disabled states)
@@ -59,6 +63,7 @@ class BooleanDatatype : public BasicDatatype
 {
 public:
     BooleanDatatype() noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // Network address types
@@ -66,12 +71,14 @@ class IPAddressDatatype : public BasicDatatype
 {
 public:
     IPAddressDatatype() noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 class IPCIDRDatatype : public BasicDatatype
 {
 public:
     IPCIDRDatatype() noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // Config section type (for device, interfaces, firewall sections)
@@ -80,6 +87,7 @@ class ConfigSectionDatatype : public BasicDatatype
 public:
     ConfigSectionDatatype() noexcept;
     std::string type_name() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // Interface type (for network interfaces)
@@ -88,6 +96,7 @@ class InterfaceDatatype : public BasicDatatype
 public:
     InterfaceDatatype() noexcept;
     std::string type_name() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
 };
 
 // List type (for arrays of values)
@@ -97,6 +106,7 @@ public:
     ListDatatype(Datatype* element_type) noexcept;
     void destroy() noexcept override;
     Datatype* get_element_type() const noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
 
 private:
     Datatype* element_type; // Type of elements in the list

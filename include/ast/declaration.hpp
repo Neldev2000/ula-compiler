@@ -3,6 +3,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <algorithm>
+
 
 #include "ast_node_interface.hpp"
 #include "statement.hpp"
@@ -14,6 +16,7 @@ public:
     Declaration(std::string_view decl_name) noexcept;
     
     const std::string& get_name() const noexcept;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 protected:
     std::string name;
@@ -32,6 +35,7 @@ public:
     const StatementList& get_statements() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     StatementList statements;
@@ -46,6 +50,7 @@ public:
     Expression* get_value() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     Expression* value;
@@ -64,6 +69,7 @@ public:
     const StatementList& get_statements() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     StatementList statements;
@@ -81,6 +87,7 @@ public:
     const std::vector<SectionStatement*>& get_sections() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::vector<SectionStatement*> sections;

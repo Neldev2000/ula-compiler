@@ -23,6 +23,7 @@ public:
     Expression* get_value() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::string name;
@@ -42,6 +43,7 @@ public:
     const StatementList& get_statements() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     StatementList statements;
@@ -77,6 +79,7 @@ public:
     
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::string name;
@@ -93,6 +96,7 @@ public:
     Declaration* get_declaration() const noexcept;
     void destroy() noexcept override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     Declaration* declaration;

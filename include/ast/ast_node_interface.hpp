@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <forward_list>
 #include <string>
 #include <string_view>
@@ -13,7 +14,7 @@ class Datatype;
 class ConfigSection;
 class Property;
 class Value;
-
+using Body = std::list<Statement*>;
 // Type aliases for common structures
 using StatementList = std::vector<Statement*>;
 using PropertyList = std::vector<Property*>;
@@ -21,7 +22,7 @@ using ValueList = std::vector<Value*>;
 
 // Helper function to destroy a list of statements
 void destroy_statements(StatementList& statements) noexcept;
-
+std::string body_to_mikrotik(const Body& body, const std::string& ident) noexcept;
 // Base interface for all AST nodes
 class ASTNodeInterface
 {
@@ -33,4 +34,5 @@ public:
     
     // Method to generate a string representation (useful for debugging)
     virtual std::string to_string() const = 0;
+    virtual std::string to_mikrotik(const std::string& ident) const = 0;
 }; 

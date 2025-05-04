@@ -31,6 +31,7 @@ public:
     ValueType get_value_type() const noexcept;
     
     void destroy() noexcept override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 protected:
     ValueType value_type;
@@ -45,6 +46,7 @@ public:
     const std::string& get_value() const noexcept;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::string str_value;
@@ -59,6 +61,7 @@ public:
     int get_value() const noexcept;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     int num_value;
@@ -73,6 +76,7 @@ public:
     bool get_value() const noexcept;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     bool bool_value;
@@ -87,6 +91,7 @@ public:
     const std::string& get_value() const noexcept;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::string ip_value;
@@ -101,6 +106,7 @@ public:
     const std::string& get_value() const noexcept;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::string cidr_value;
@@ -116,6 +122,7 @@ public:
     void destroy() noexcept override;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     ValueList values;
@@ -132,6 +139,7 @@ public:
     void destroy() noexcept override;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     std::string name;
@@ -148,6 +156,7 @@ public:
     void destroy() noexcept override;
     Datatype* get_type() const override;
     std::string to_string() const override;
+    std::string to_mikrotik(const std::string& ident) const override;
     
 private:
     Expression* base;

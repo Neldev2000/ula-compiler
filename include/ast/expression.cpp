@@ -14,6 +14,12 @@ void Value::destroy() noexcept
     // No dynamic memory to clean up
 }
 
+std::string Value::to_mikrotik(const std::string& ident) const
+{
+    // Default implementation returns a comment
+    return ident + "# Value of type " + std::to_string(static_cast<int>(value_type));
+}
+
 // StringValue implementation
 StringValue::StringValue(std::string_view str_value) noexcept 
     : Value(ValueType::STRING), str_value(str_value) {}
@@ -31,6 +37,12 @@ Datatype* StringValue::get_type() const
 std::string StringValue::to_string() const 
 {
     return "\"" + str_value + "\"";
+}
+
+std::string StringValue::to_mikrotik(const std::string& ident) const
+{
+    // In MikroTik, strings are enclosed in double quotes
+    return ident + "\"" + str_value + "\"";
 }
 
 // NumberValue implementation
@@ -52,6 +64,12 @@ std::string NumberValue::to_string() const
     return std::to_string(num_value);
 }
 
+std::string NumberValue::to_mikrotik(const std::string& ident) const
+{
+    // Numbers in MikroTik are represented directly
+    return ident + std::to_string(num_value);
+}
+
 // BooleanValue implementation
 BooleanValue::BooleanValue(bool bool_value) noexcept 
     : Value(ValueType::BOOLEAN), bool_value(bool_value) {}
@@ -69,6 +87,12 @@ Datatype* BooleanValue::get_type() const
 std::string BooleanValue::to_string() const 
 {
     return bool_value ? "true" : "false";
+}
+
+std::string BooleanValue::to_mikrotik(const std::string& ident) const
+{
+    // Boolean in MikroTik is represented as true/false (lowercase)
+    return ident + (bool_value ? "true" : "false");
 }
 
 // IPAddressValue implementation
@@ -90,6 +114,12 @@ std::string IPAddressValue::to_string() const
     return ip_value;
 }
 
+std::string IPAddressValue::to_mikrotik(const std::string& ident) const
+{
+    // IP addresses in MikroTik can be represented in quotes or directly
+    return ident + "\"" + ip_value + "\"";
+}
+
 // IPCIDRValue implementation
 IPCIDRValue::IPCIDRValue(std::string_view cidr_value) noexcept 
     : Value(ValueType::IP_CIDR), cidr_value(cidr_value) {}
@@ -107,6 +137,12 @@ Datatype* IPCIDRValue::get_type() const
 std::string IPCIDRValue::to_string() const 
 {
     return cidr_value;
+}
+
+std::string IPCIDRValue::to_mikrotik(const std::string& ident) const
+{
+    // CIDR notation in MikroTik can be represented in quotes or directly
+    return ident + "\"" + cidr_value + "\"";
 }
 
 // ListValue implementation
@@ -173,6 +209,30 @@ std::string ListValue::to_string() const
     return ss.str();
 }
 
+std::string ListValue::to_mikrotik(const std::string& ident) const
+{
+    // In MikroTik, arrays are represented with curly braces
+    std::stringstream ss;
+    ss << ident << "{";
+    bool first = true;
+    
+    for (const auto* value : values) {
+        if (!first) {
+            ss << ",";
+        }
+        if (value) {
+            // Note: Using empty indentation for array elements since they're inline
+            ss << value->to_mikrotik("");
+        } else {
+            ss << "\"\""; // Use empty string for null values
+        }
+        first = false;
+    }
+    
+    ss << "}";
+    return ss.str();
+}
+
 // IdentifierExpression implementation
 IdentifierExpression::IdentifierExpression(std::string_view name) noexcept 
     : name(name) {}
@@ -197,6 +257,12 @@ Datatype* IdentifierExpression::get_type() const
 std::string IdentifierExpression::to_string() const 
 {
     return name;
+}
+
+std::string IdentifierExpression::to_mikrotik(const std::string& ident) const
+{
+    // In MikroTik, variables are prefixed with $
+    return ident + "$" + name;
 }
 
 // PropertyReference implementation
@@ -232,4 +298,13 @@ Datatype* PropertyReference::get_type() const
 std::string PropertyReference::to_string() const 
 {
     return base ? base->to_string() + "." + property_name : property_name;
+}
+
+std::string PropertyReference::to_mikrotik(const std::string& ident) const
+{
+    // In MikroTik, property access uses the -> operator
+    if (base) {
+        return ident + "(" + base->to_mikrotik("") + "->" + property_name + ")";
+    }
+    return ident + "$" + property_name;
 } 
