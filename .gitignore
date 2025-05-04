@@ -5,5 +5,5 @@
 /bin/*
 /bin/parser/*
 /obj/*
-/obj/ast/*
+/obj/ast/
 /obj/semantic/*
