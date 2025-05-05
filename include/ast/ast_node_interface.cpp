@@ -1,5 +1,6 @@
 #include "ast_node_interface.hpp"
 #include "statement.hpp"
+#include "declaration.hpp"
 
 // Implementation of helper function to destroy a list of statements
 void destroy_statements(StatementList& statements) noexcept
@@ -13,6 +14,16 @@ void destroy_statements(StatementList& statements) noexcept
         }
     }
     statements.clear();
+}
+
+// Implementation of helper function to safely destroy a program declaration
+void destroy_program(ProgramDeclaration* program) noexcept
+{
+    if (program)
+    {
+        program->destroy();
+        delete program;
+    }
 }
 
 std::string body_to_mikrotik(const Body& body, const std::string& ident) noexcept

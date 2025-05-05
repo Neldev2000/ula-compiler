@@ -14,6 +14,7 @@ class Datatype;
 class ConfigSection;
 class Property;
 class Value;
+class ProgramDeclaration;
 using Body = std::list<Statement*>;
 // Type aliases for common structures
 using StatementList = std::vector<Statement*>;
@@ -22,6 +23,8 @@ using ValueList = std::vector<Value*>;
 
 // Helper function to destroy a list of statements
 void destroy_statements(StatementList& statements) noexcept;
+// Helper function to safely destroy a program declaration
+void destroy_program(ProgramDeclaration* program) noexcept;
 std::string body_to_mikrotik(const Body& body, const std::string& ident) noexcept;
 // Base interface for all AST nodes
 class ASTNodeInterface
