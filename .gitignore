@@ -1,9 +1,2 @@
-.env
-*.sh
-/examples/*
-/build/*
 /bin/*
-/bin/parser/*
-/obj/*
-/obj/ast/
-/obj/semantic/*
+/docs/*
