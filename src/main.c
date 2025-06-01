@@ -97,7 +97,19 @@ int main(int argc, char* argv[]) {
             strncpy(output_filename, argv[2], sizeof(output_filename) - 1);
             output_filename[sizeof(output_filename) - 1] = '\0';
         } else {
-            snprintf(output_filename, sizeof(output_filename), "%s.rsc", argv[1]);
+            // Create output filename by removing the extension and adding .rsc
+            char input_copy[251];  // 256 - 4 (".rsc") - 1 (null terminator) = 251
+            strncpy(input_copy, argv[1], sizeof(input_copy) - 1);
+            input_copy[sizeof(input_copy) - 1] = '\0';
+            
+            // Find the last occurrence of '.' to remove the extension
+            char* last_dot = strrchr(input_copy, '.');
+            if (last_dot != NULL) {
+                *last_dot = '\0';  // Remove the extension
+            }
+            
+            // Add .rsc extension
+            snprintf(output_filename, sizeof(output_filename), "%s.rsc", input_copy);
         }
         
         // Check if the AST was successfully built
@@ -105,8 +117,7 @@ int main(int argc, char* argv[]) {
             // Perform semantic validation before generating code
             if (validate_semantics(parser_result)) {
                 // Validation passed, generate code
-                printf("Semantic validation passed. Generating RouterOS script...\n");
-                
+               
                 // Open output file for writing
                 std::ofstream output_file(output_filename);
                 if (output_file.is_open()) {
